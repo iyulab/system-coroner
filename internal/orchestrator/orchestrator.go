@@ -59,6 +59,30 @@ func (o *Orchestrator) SetProvider(p analyzer.Provider) {
 	o.provider = p
 }
 
+// registerKnownGoodPaths registers operator-declared and auto-detected paths as known-good.
+// Auto-detected: the directory containing the coroner binary and the configured output base dir.
+// Operator-declared: any paths listed in config.Baseline.KnownPaths.
+func registerKnownGoodPaths(cfg *config.Config) {
+	// Auto: coroner's own binary directory (e.g. D:\tool where coroner.exe lives)
+	if exePath, err := os.Executable(); err == nil {
+		if abs, err := filepath.Abs(filepath.Dir(exePath)); err == nil {
+			analyzer.AddKnownGoodPath(abs)
+		}
+	}
+	// Auto: configured output directory (e.g. D:\tool\output or ./output)
+	if cfg.Output.Dir != "" {
+		if abs, err := filepath.Abs(cfg.Output.Dir); err == nil {
+			analyzer.AddKnownGoodPath(abs)
+		}
+	}
+	// Operator-declared paths from [baseline] known_paths
+	for _, p := range cfg.Baseline.KnownPaths {
+		if abs, err := filepath.Abs(p); err == nil {
+			analyzer.AddKnownGoodPath(abs)
+		}
+	}
+}
+
 // registerHostIPs collects all local network interface addresses and registers them
 // as known-good IPs in the analyzer preprocessor. This prevents the host's own
 // external IP from being flagged as a C2 connection (FP-001).
@@ -93,6 +117,11 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 
 	// FP-001: Register host's own IPs as known-good to prevent self-IP false positives
 	registerHostIPs()
+
+	// FP-003: Register known-good paths to prevent coroner's own footprint from being
+	// flagged as attack staging. Auto-detect the binary directory and output base dir,
+	// then merge with any operator-declared paths from config [baseline].
+	registerKnownGoodPaths(o.cfg)
 
 	// Generate output directory
 	outputDir := collector.GenerateOutputDir(o.cfg.Output.Dir)

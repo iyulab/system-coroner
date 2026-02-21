@@ -1,43 +1,61 @@
-# system-coroner 설정 파일
-# 사용법: 이 파일을 config.toml로 복사한 후 수정
+# system-coroner configuration file
+# Usage: copy this file to config.toml and edit as needed
 #   cp config.example.toml config.toml
 
-# LLM 프로바이더 설정
+# LLM provider configuration
 [llm]
 # provider: "anthropic" | "openai" | "ollama" | "gpustack"
 provider = "ollama"
 
-# API 키 (anthropic/openai/gpustack 필수, ollama는 불필요)
-# 환경변수 CORONER_API_KEY로도 설정 가능
+# API key (required for anthropic/openai/gpustack, not needed for ollama)
+# Can also be set via environment variable CORONER_API_KEY
 # api_key = "sk-..."
 
-# 모델 이름
+# Model name
 model = "llama3.1:8b"
 
-# 엔드포인트 (선택사항)
-# ollama  기본값: http://localhost:11434
-# openai  기본값: https://api.openai.com/v1
-# gpustack 기본값: http://localhost/v1
+# Endpoint (optional)
+# ollama  default: http://localhost:11434
+# openai  default: https://api.openai.com/v1
+# gpustack default: http://localhost/v1
 # endpoint = "http://localhost/v1"
 
-# HTTP 타임아웃 (초, 선택사항)
-# 0 = 프로바이더 기본값 사용 (anthropic/openai: 120초, ollama/gpustack: 300초)
+# HTTP timeout in seconds (optional)
+# 0 = use provider default (anthropic/openai: 120s, ollama/gpustack: 300s)
 # timeout = 0
 
-# 출력 설정
+# Output settings
 [output]
-# 결과 저장 디렉토리 (기본값: output)
+# Directory for results (default: output)
 dir = "output"
 
-# 리포트 생성 후 브라우저 자동 열기
+# Open browser automatically after report generation
 open_browser = false
 
-# LLM 원본 응답 보존 여부
+# Preserve raw LLM responses
 keep_raw = true
 
-# 탐지 항목 개별 활성화/비활성화
-# 기본값: 모든 항목 활성화
-# false로 설정하면 해당 항목 비활성화
+# Baseline — declare known-good artifacts on this host so they are not flagged as threats.
+# coroner auto-detects its own binary directory and output directory.
+# Add additional paths, accounts, or processes that are expected/legitimate in your environment.
+[baseline]
+# known_paths are directory prefixes for trusted tools or operator infrastructure.
+# Any collected artifact whose path starts with one of these values will be annotated
+# as known-good so the LLM does not treat it as an attack artifact.
+# Example: known_paths = ["D:\\monitoring\\agent", "C:\\ops\\tools"]
+# known_paths = []
+
+# known_accounts are local account names that are legitimate and expected on this host.
+# Example: known_accounts = ["backup_svc", "monitoring_agent"]
+# known_accounts = []
+
+# known_processes are executable filenames (without path) that are known-good.
+# Example: known_processes = ["backup.exe", "agent.exe"]
+# known_processes = []
+
+# Enable/disable individual checks
+# Default: all checks enabled
+# Set false to disable a specific check
 [checks]
 # c2_connections = true
 # persistence = true

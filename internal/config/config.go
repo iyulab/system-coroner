@@ -11,9 +11,26 @@ import (
 
 // Config is the top-level configuration.
 type Config struct {
-	LLM    LLMConfig       `toml:"llm"`
-	Output OutputConfig    `toml:"output"`
-	Checks map[string]bool `toml:"checks"`
+	LLM      LLMConfig       `toml:"llm"`
+	Output   OutputConfig    `toml:"output"`
+	Checks   map[string]bool `toml:"checks"`
+	Baseline BaselineConfig  `toml:"baseline"`
+}
+
+// BaselineConfig declares known-good artifacts on this host that should not be
+// flagged as attack artifacts. Paths, accounts, and processes listed here are
+// annotated with a hint so the LLM understands they are expected operator infrastructure.
+type BaselineConfig struct {
+	// KnownPaths are directory or file paths belonging to trusted tools/operators.
+	// Any collected artifact whose path starts with one of these values is annotated
+	// as known-good. Example: ["D:\\tool", "C:\\monitoring\\agent"]
+	KnownPaths []string `toml:"known_paths"`
+	// KnownAccounts are local account names that are legitimate and expected.
+	// Example: ["backup_svc", "monitoring_agent"]
+	KnownAccounts []string `toml:"known_accounts"`
+	// KnownProcesses are executable names (without path) that are known-good.
+	// Example: ["backup.exe", "monitoring.exe"]
+	KnownProcesses []string `toml:"known_processes"`
 }
 
 // LLMConfig configures the LLM provider for forensic analysis.

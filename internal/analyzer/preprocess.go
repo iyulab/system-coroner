@@ -47,12 +47,26 @@ var parsedKnownGoodNets []*net.IPNet
 // extraKnownGoodIPs holds additional IPs added at runtime (e.g. the host's own external IP).
 var extraKnownGoodIPs []*net.IPNet
 
+// knownGoodPaths holds operator-declared directories/files that are expected infrastructure.
+// Artifacts whose paths start with one of these values are annotated as known-good (FP-003).
+var knownGoodPaths []string
+
 func init() {
 	for _, cidr := range knownGoodCIDRs {
 		_, n, err := net.ParseCIDR(cidr)
 		if err == nil {
 			parsedKnownGoodNets = append(parsedKnownGoodNets, n)
 		}
+	}
+}
+
+// AddKnownGoodPath registers a directory or file path as known-good operator infrastructure.
+// Artifacts whose paths begin with this prefix will be annotated so the LLM does not treat
+// them as attack artifacts. Accepts absolute paths; case-insensitive matching on Windows.
+func AddKnownGoodPath(path string) {
+	path = strings.TrimSpace(path)
+	if path != "" {
+		knownGoodPaths = append(knownGoodPaths, path)
 	}
 }
 
@@ -123,6 +137,14 @@ func Preprocess(checkID, osName, data string) PreprocessResult {
 	if checkID == "account_compromise" {
 		if obj, ok := processed.(map[string]interface{}); ok {
 			processed = annotateBruteForceContext(obj)
+		}
+	}
+
+	// FP-003: Annotate items whose paths fall within operator-declared known-good directories.
+	// This prevents coroner's own working directory and output from being flagged as attack staging.
+	if len(knownGoodPaths) > 0 {
+		if obj, ok := processed.(map[string]interface{}); ok {
+			processed = annotateKnownGoodPaths(obj)
 		}
 	}
 
@@ -433,6 +455,77 @@ func annotateBruteForceContext(obj map[string]interface{}) map[string]interface{
 		return result
 	}
 	return obj
+}
+
+// annotateKnownGoodPaths walks top-level arrays in a check's JSON output and annotates
+// items whose path fields start with a known-good operator path. This prevents coroner's
+// own output directory, config files, and tool directories from being flagged (FP-003).
+func annotateKnownGoodPaths(obj map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{}, len(obj)+1)
+	matchedPaths := make(map[string]struct{})
+
+	for k, v := range obj {
+		arr, ok := v.([]interface{})
+		if !ok {
+			result[k] = v
+			continue
+		}
+
+		annotated := make([]interface{}, 0, len(arr))
+		for _, item := range arr {
+			itemObj, ok := item.(map[string]interface{})
+			if !ok {
+				annotated = append(annotated, item)
+				continue
+			}
+
+			if matched, kp := itemMatchesKnownGoodPath(itemObj); matched {
+				copy := copyMap(itemObj)
+				copy["_analysis_hint"] = "This path is within the operator's declared known-good directory (" +
+					kp + "). It is expected operator/tool infrastructure, NOT an attack artifact — do not flag it."
+				annotated = append(annotated, copy)
+				matchedPaths[kp] = struct{}{}
+			} else {
+				annotated = append(annotated, itemObj)
+			}
+		}
+		result[k] = annotated
+	}
+
+	// Add a top-level hint summarising which known-good paths were observed.
+	if len(matchedPaths) > 0 {
+		paths := make([]string, 0, len(matchedPaths))
+		for p := range matchedPaths {
+			paths = append(paths, p)
+		}
+		result["_operator_baseline"] = "The following paths are declared as known-good operator infrastructure and must NOT be treated as attack artifacts: " +
+			strings.Join(paths, ", ")
+	}
+
+	return result
+}
+
+// itemMatchesKnownGoodPath checks whether any path-like field in the item starts with
+// a registered known-good path. Returns (true, matchedPath) or (false, "").
+func itemMatchesKnownGoodPath(item map[string]interface{}) (bool, string) {
+	pathFields := []string{"value", "path", "file_path", "target_path", "execute", "arguments", "name"}
+	for _, field := range pathFields {
+		v, ok := item[field]
+		if !ok {
+			continue
+		}
+		s, ok := v.(string)
+		if !ok || s == "" {
+			continue
+		}
+		sLower := strings.ToLower(s)
+		for _, kp := range knownGoodPaths {
+			if strings.HasPrefix(sLower, strings.ToLower(kp)) {
+				return true, kp
+			}
+		}
+	}
+	return false, ""
 }
 
 // truncateRaw applies a simple length limit to non-JSON string data.

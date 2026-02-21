@@ -65,6 +65,9 @@ type ReportData struct {
 	// Collection metadata
 	CollectionDuration string `json:"collection_duration"`
 	AnalysisDuration   string `json:"analysis_duration"`
+
+	// Analyst context (for interactive re-evaluation)
+	AnalystContext string `json:"analyst_context,omitempty"`
 }
 
 // EvidenceHash holds file-level integrity information for the report.
@@ -174,6 +177,15 @@ func New() (*Reporter, error) {
 	}
 
 	return &Reporter{tmpl: tmpl}, nil
+}
+
+// GenerateString renders the HTML template to a string (used by serve mode).
+func (r *Reporter) GenerateString(data ReportData) (string, error) {
+	var buf strings.Builder
+	if err := r.tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("render report: %w", err)
+	}
+	return buf.String(), nil
 }
 
 // Generate renders the HTML report and writes it to the output directory.

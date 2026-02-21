@@ -1,0 +1,8 @@
+{
+  "collected_at": "2026-02-22T09:00:00Z",
+  "hostname": "WORKSTATION01",
+  "check": "discovery_recon",
+  "recon_commands": [],
+  "rdp_mru": [],
+  "errors": []
+}

@@ -14,8 +14,8 @@ func TestDetectOS(t *testing.T) {
 
 func TestWindowsChecks_Count(t *testing.T) {
 	checks := WindowsChecks()
-	if len(checks) != 9 {
-		t.Errorf("WindowsChecks() returned %d checks, want 9", len(checks))
+	if len(checks) < 9 {
+		t.Errorf("WindowsChecks() returned %d checks, want at least 9", len(checks))
 	}
 }
 
@@ -96,8 +96,8 @@ func TestFilterEnabled_DisableOne(t *testing.T) {
 		"webshell": false,
 	}
 	filtered := FilterEnabled(checks, enabled)
-	if len(filtered) != 8 {
-		t.Errorf("FilterEnabled disabling 1: got %d, want 8", len(filtered))
+	if len(filtered) != len(checks)-1 {
+		t.Errorf("FilterEnabled disabling 1: got %d, want %d", len(filtered), len(checks)-1)
 	}
 	for _, c := range filtered {
 		if c.ID == "webshell" {

@@ -2,7 +2,7 @@ package platform
 
 import "time"
 
-// WindowsChecks returns the 9 Windows intrusion detection checks.
+// WindowsChecks returns the Windows intrusion detection checks.
 func WindowsChecks() []Check {
 	return []Check{
 		{
@@ -85,6 +85,15 @@ func WindowsChecks() []Check {
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",
 			RequiresAdmin: false,
+		},
+		{
+			ID:            "discovery_recon",
+			Name:          "Internal Reconnaissance",
+			Description:   "Detect attacker recon commands: net user, whoami /all, nltest, BloodHound, port scanning",
+			Script:        "windows/discovery_recon.ps1",
+			Timeout:       30 * time.Second,
+			OutputFormat:  "json",
+			RequiresAdmin: true,
 		},
 	}
 }

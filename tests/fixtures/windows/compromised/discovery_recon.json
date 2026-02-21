@@ -1,0 +1,63 @@
+{
+  "collected_at": "2026-02-22T03:15:00Z",
+  "hostname": "DC01",
+  "check": "discovery_recon",
+  "recon_commands": [
+    {
+      "time": "2026-02-22T02:55:00Z",
+      "process_name": "SharpHound.exe",
+      "process_path": "C:\\Users\\jsmith\\AppData\\Local\\Temp\\SharpHound.exe",
+      "command_line": "SharpHound.exe -CollectionMethod All --ZipFilename loot.zip",
+      "account": "jsmith",
+      "parent_proc": "cmd.exe",
+      "event_id": 4688
+    },
+    {
+      "time": "2026-02-22T02:52:00Z",
+      "process_name": "nltest.exe",
+      "process_path": "C:\\Windows\\System32\\nltest.exe",
+      "command_line": "nltest /domain_trusts",
+      "account": "jsmith",
+      "parent_proc": "cmd.exe",
+      "event_id": 4688
+    },
+    {
+      "time": "2026-02-22T02:51:00Z",
+      "process_name": "net.exe",
+      "process_path": "C:\\Windows\\System32\\net.exe",
+      "command_line": "net group \"Domain Admins\" /domain",
+      "account": "jsmith",
+      "parent_proc": "cmd.exe",
+      "event_id": 4688
+    },
+    {
+      "time": "2026-02-22T02:50:00Z",
+      "process_name": "whoami.exe",
+      "process_path": "C:\\Windows\\System32\\whoami.exe",
+      "command_line": "whoami /all",
+      "account": "jsmith",
+      "parent_proc": "powershell.exe",
+      "event_id": 4688
+    },
+    {
+      "time": "2026-02-22T02:48:00Z",
+      "process_name": "net.exe",
+      "process_path": "C:\\Windows\\System32\\net.exe",
+      "command_line": "net view /domain",
+      "account": "jsmith",
+      "parent_proc": "cmd.exe",
+      "event_id": 4688
+    }
+  ],
+  "rdp_mru": [
+    {
+      "server": "192.168.10.20",
+      "username": "Administrator"
+    },
+    {
+      "server": "192.168.10.30",
+      "username": "Administrator"
+    }
+  ],
+  "errors": []
+}

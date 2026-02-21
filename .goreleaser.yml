@@ -34,6 +34,11 @@ archives:
         formats:
           - zip
 
+  - id: raw
+    name_template: "coroner-{{ .Os }}-{{ .Arch }}"
+    formats:
+      - binary
+
 checksum:
   name_template: "checksums.txt"
 

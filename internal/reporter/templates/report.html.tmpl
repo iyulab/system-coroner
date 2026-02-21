@@ -753,7 +753,19 @@ function submitFeedback(){
   var status=document.getElementById('feedback-status');
   submitBtn.disabled=true;
   submitBtn.textContent='Analyzing...';
-  status.textContent='LLM is re-evaluating the report. Please wait...';
+
+  var startTime=Date.now();
+  var spinFrames=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+  var spinIdx=0;
+  function updateStatus(){
+    var elapsed=Math.floor((Date.now()-startTime)/1000);
+    var timeStr=elapsed>=60?(Math.floor(elapsed/60)+'m '+(elapsed%60)+'s'):(elapsed+'s');
+    status.textContent=spinFrames[spinIdx%spinFrames.length]+' LLM 재평가 중... '+timeStr+' 경과';
+    spinIdx++;
+  }
+  updateStatus();
+  var timer=setInterval(updateStatus,200);
+
   fetch('/re-evaluate',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -764,12 +776,14 @@ function submitFeedback(){
     return r.text();
   })
   .then(function(html){
+    clearInterval(timer);
     document.open();
     document.write(html);
     document.close();
   })
   .catch(function(err){
-    status.textContent='Error: '+err.message;
+    clearInterval(timer);
+    status.textContent='⚠ Error: '+err.message;
     submitBtn.disabled=false;
     submitBtn.textContent='Re-evaluate';
   });

@@ -8,10 +8,10 @@ func TestKnownAttackToolRule(t *testing.T) {
 	rule := KnownAttackToolRule{}
 
 	tests := []struct {
-		name     string
-		item     map[string]interface{}
-		wantRes  FilterResult
-		wantMin  int
+		name    string
+		item    map[string]interface{}
+		wantRes FilterResult
+		wantMin int
 	}{
 		{
 			name:    "mimikatz by name",
@@ -78,7 +78,7 @@ func TestSensitiveFileLNKRule(t *testing.T) {
 		wantRes FilterResult
 	}{
 		{"SAM hive", `C:\Windows\System32\config\SAM`, FilterSafe}, // Windows path → safe
-		{"NTDS.dit", `C:\Windows\NTDS\NTDS.dit`, FilterSafe},      // Windows path → safe
+		{"NTDS.dit", `C:\Windows\NTDS\NTDS.dit`, FilterSafe},       // Windows path → safe
 		{"pfx on desktop", `C:\Users\admin\Desktop\admin.pfx`, FilterSuspicious},
 		{"id_rsa", `/home/user/.ssh/id_rsa`, FilterSuspicious},
 		{"normal doc", `C:\Users\alice\Documents\report.docx`, FilterUncertain},
@@ -141,9 +141,9 @@ func TestBloodHoundPatternRule(t *testing.T) {
 
 func TestApplyRules_ScoreNormalization(t *testing.T) {
 	items := []map[string]interface{}{
-		{"name": "mimikatz.exe", "attack_tool": true},  // suspicious score=100
-		{"name": "notepad.exe"},                         // uncertain
-		{"name": "procdump.exe", "attack_tool": true},  // suspicious score=95+
+		{"name": "mimikatz.exe", "attack_tool": true}, // suspicious score=100
+		{"name": "notepad.exe"},                       // uncertain
+		{"name": "procdump.exe", "attack_tool": true}, // suspicious score=95+
 	}
 	rules := RulesForCheck("process_execution")
 	crs := ApplyRules("process_execution", items, rules)
@@ -175,9 +175,9 @@ func TestApplyRules_AllSafe(t *testing.T) {
 
 func TestSuspiciousAndUncertainItems_ExcludesSafe(t *testing.T) {
 	items := []map[string]interface{}{
-		{"target_path": `C:\Windows\System32\SAM`},              // Windows path → safe
-		{"target_path": `C:\Users\admin\Desktop\admin.pfx`},    // suspicious
-		{"target_path": `C:\Users\bob\Documents\report.docx`},  // uncertain
+		{"target_path": `C:\Windows\System32\SAM`},            // Windows path → safe
+		{"target_path": `C:\Users\admin\Desktop\admin.pfx`},   // suspicious
+		{"target_path": `C:\Users\bob\Documents\report.docx`}, // uncertain
 	}
 	rules := RulesForCheck("file_access")
 	crs := ApplyRules("file_access", items, rules)

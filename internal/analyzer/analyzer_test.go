@@ -385,7 +385,7 @@ func TestAnalyzer_AnalystContextInjected(t *testing.T) {
 	}
 
 	a := New(mock, "TEST-HOST", "windows", false)
-	a.SetAnalystContext("rclone.exe는 정상 백업 도구")
+	a.SetAnalystContext("rclone.exe is a legitimate backup tool")
 	_, _ = a.AnalyzeAll(context.Background(), map[string]string{
 		"c2_connections": `{"connections":[]}`,
 	})
@@ -395,7 +395,7 @@ func TestAnalyzer_AnalystContextInjected(t *testing.T) {
 		t.Fatal("no prompts captured")
 	}
 	firstPrompt := capturedPrompts[0]
-	if !contains(firstPrompt, "rclone.exe는 정상 백업 도구") {
+	if !contains(firstPrompt, "rclone.exe is a legitimate backup tool") {
 		t.Errorf("analyst context not injected into prompt")
 	}
 	if !contains(firstPrompt, "ANALYST CONTEXT") {

@@ -70,8 +70,8 @@ func TestServer_ReEvaluate(t *testing.T) {
 	callCount := 0
 	mockReEval := func(ctx context.Context, analystContext string) (*reporter.ReportData, error) {
 		callCount++
-		if analystContext != "rclone은 정상" {
-			t.Errorf("expected context 'rclone은 정상', got %q", analystContext)
+		if analystContext != "rclone is a legitimate backup tool" {
+			t.Errorf("expected context 'rclone is a legitimate backup tool', got %q", analystContext)
 		}
 		return &reporter.ReportData{Hostname: "testhost"}, nil
 	}
@@ -87,7 +87,7 @@ func TestServer_ReEvaluate(t *testing.T) {
 	}
 	defer srv.Stop()
 
-	body := strings.NewReader(`{"context":"rclone은 정상"}`)
+	body := strings.NewReader(`{"context":"rclone is a legitimate backup tool"}`)
 	resp, err := http.Post("http://"+addr+"/re-evaluate", "application/json", body)
 	if err != nil {
 		t.Fatalf("POST /re-evaluate: %v", err)

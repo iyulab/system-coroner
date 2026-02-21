@@ -760,7 +760,7 @@ function submitFeedback(){
   function updateStatus(){
     var elapsed=Math.floor((Date.now()-startTime)/1000);
     var timeStr=elapsed>=60?(Math.floor(elapsed/60)+'m '+(elapsed%60)+'s'):(elapsed+'s');
-    status.textContent=spinFrames[spinIdx%spinFrames.length]+' LLM 재평가 중... '+timeStr+' 경과';
+    status.textContent=spinFrames[spinIdx%spinFrames.length]+' Re-evaluating with LLM... '+timeStr+' elapsed';
     spinIdx++;
   }
   updateStatus();

@@ -195,7 +195,7 @@ func (r UnsignedRunKeyRule) Apply(item map[string]interface{}) (FilterResult, in
 	if strings.HasPrefix(value, `c:\windows\system32\`) || strings.HasPrefix(value, `c:\windows\syswow64\`) {
 		return FilterUncertain, 20, ""
 	}
-	return FilterSuspicious, 80, "Run key executable with invalid/missing signature ("+sig+"): "+value
+	return FilterSuspicious, 80, "Run key executable with invalid/missing signature (" + sig + "): " + value
 }
 
 // --- process_execution rules ---

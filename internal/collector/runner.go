@@ -138,7 +138,7 @@ func buildPowerShellCommand(ctx context.Context, scriptContent []byte) (*exec.Cm
 	// Try temp file approach first (avoids Defender ASR blocking)
 	tmpFile, err := os.CreateTemp("", "coroner-*.ps1")
 	if err != nil {
-		// fallback: -EncodedCommand 방식
+		// fallback: -EncodedCommand approach
 		encoded := encodeForPowerShell(string(scriptContent))
 		cmd := exec.CommandContext(ctx,
 			"powershell.exe",
@@ -151,7 +151,7 @@ func buildPowerShellCommand(ctx context.Context, scriptContent []byte) (*exec.Cm
 	if _, err := tmpFile.Write(scriptContent); err != nil {
 		tmpFile.Close()
 		os.Remove(tmpPath)
-		// fallback: -EncodedCommand 방식
+		// fallback: -EncodedCommand approach
 		encoded := encodeForPowerShell(string(scriptContent))
 		cmd := exec.CommandContext(ctx,
 			"powershell.exe",

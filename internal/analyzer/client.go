@@ -69,6 +69,23 @@ func NewProvider(provider, apiKey, model, endpoint string, timeoutSec int) (Prov
 			endpoint: ep,
 			client:   &http.Client{Timeout: timeout},
 		}, nil
+	case "gpustack":
+		// GPUStack exposes an OpenAI-compatible API.
+		// Default endpoint assumes GPUStack running on localhost port 80.
+		ep := "http://localhost/v1"
+		if endpoint != "" {
+			ep = endpoint
+		}
+		timeout := 300 * time.Second
+		if timeoutSec > 0 {
+			timeout = time.Duration(timeoutSec) * time.Second
+		}
+		return &OpenAIProvider{
+			apiKey:   apiKey,
+			model:    model,
+			endpoint: ep,
+			client:   &http.Client{Timeout: timeout},
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported provider: %q", provider)
 	}

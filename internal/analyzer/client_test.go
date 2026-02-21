@@ -515,6 +515,42 @@ func TestNewProvider_Ollama(t *testing.T) {
 	}
 }
 
+func TestNewProvider_GPUStack_DefaultEndpoint(t *testing.T) {
+	p, err := NewProvider("gpustack", "key", "model", "", 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	op, ok := p.(*OpenAIProvider)
+	if !ok {
+		t.Fatal("expected OpenAIProvider (gpustack reuses OpenAI-compatible API)")
+	}
+	if op.endpoint != "http://localhost/v1" {
+		t.Errorf("default endpoint = %q, want %q", op.endpoint, "http://localhost/v1")
+	}
+}
+
+func TestNewProvider_GPUStack_CustomEndpoint(t *testing.T) {
+	p, err := NewProvider("gpustack", "key", "model", "http://192.168.1.100/v1", 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	op := p.(*OpenAIProvider)
+	if op.endpoint != "http://192.168.1.100/v1" {
+		t.Errorf("custom endpoint = %q, want %q", op.endpoint, "http://192.168.1.100/v1")
+	}
+}
+
+func TestNewProvider_GPUStack_DefaultTimeout(t *testing.T) {
+	p, err := NewProvider("gpustack", "key", "model", "", 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	op := p.(*OpenAIProvider)
+	if op.client.Timeout.Seconds() != 300 {
+		t.Errorf("expected 300s default timeout for gpustack, got %v", op.client.Timeout)
+	}
+}
+
 func TestNewProvider_Unsupported(t *testing.T) {
 	_, err := NewProvider("google", "key", "model", "", 0)
 	if err == nil {

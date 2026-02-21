@@ -4,10 +4,10 @@
 
 # LLM 프로바이더 설정
 [llm]
-# provider: "anthropic" | "openai" | "ollama"
+# provider: "anthropic" | "openai" | "ollama" | "gpustack"
 provider = "ollama"
 
-# API 키 (anthropic/openai 필수, ollama는 불필요)
+# API 키 (anthropic/openai/gpustack 필수, ollama는 불필요)
 # 환경변수 CORONER_API_KEY로도 설정 가능
 # api_key = "sk-..."
 
@@ -15,12 +15,13 @@ provider = "ollama"
 model = "llama3.1:8b"
 
 # 엔드포인트 (선택사항)
-# ollama 기본값: http://localhost:11434
-# openai 기본값: https://api.openai.com/v1
-# endpoint = "http://localhost:11434"
+# ollama  기본값: http://localhost:11434
+# openai  기본값: https://api.openai.com/v1
+# gpustack 기본값: http://localhost/v1
+# endpoint = "http://localhost/v1"
 
 # HTTP 타임아웃 (초, 선택사항)
-# 0 = 프로바이더 기본값 사용 (anthropic/openai: 120초, ollama: 300초)
+# 0 = 프로바이더 기본값 사용 (anthropic/openai: 120초, ollama/gpustack: 300초)
 # timeout = 0
 
 # 출력 설정

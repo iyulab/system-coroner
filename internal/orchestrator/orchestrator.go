@@ -173,6 +173,18 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 	rawCheckData := checkData // same data — LLM preprocessing happens inside analyzer
 
 	a := analyzer.New(provider, hostname, osName, o.opts.Verbose)
+	if !o.opts.Verbose {
+		a.SetProgress(func(checkID string, done, total int, elapsed time.Duration, err error) {
+			status := "✓"
+			if err != nil {
+				status = "✗"
+			}
+			width := len(fmt.Sprintf("%d", total))
+			fmt.Fprintf(os.Stderr, "  [%*d/%d] %-22s %s  %s\n",
+				width, done, total,
+				checkID, status, elapsed.Round(time.Millisecond))
+		})
+	}
 	analysisResult, err := a.AnalyzeAll(ctx, checkData)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[orchestrator] analysis error: %v\n", err)

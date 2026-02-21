@@ -3,152 +3,202 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>system-coroner Report — {{.Hostname}}</title>
+<title>system-coroner — {{.Hostname}}</title>
 <style>
 :root {
-  --bg: #0d1117; --fg: #c9d1d9; --card: #161b22; --border: #30363d;
-  --red: #dc2626; --yellow: #d97706; --green: #3fb950; --blue: #58a6ff;
-  --red-bg: #3d1418; --yellow-bg: #3d2200; --green-bg: #0d3117;
+  --bg:#0d1117;--fg:#c9d1d9;--card:#161b22;--border:#30363d;
+  --red:#dc2626;--yellow:#d97706;--green:#3fb950;--blue:#58a6ff;
+  --red-bg:#3d1418;--yellow-bg:#3d2200;--green-bg:#0d3117;
+  --fg-muted:#8b949e;--card2:#1c2128;--topbar-h:48px;
 }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; }
-.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6;padding-top:var(--topbar-h);}
 
-/* Banner */
-.banner { padding: 36px 24px; border-radius: 8px; margin-bottom: 24px; text-align: center; }
-.banner-critical { background: #450a0a; border: 3px solid var(--red); animation: pulse-border 2s ease-in-out infinite; }
-.banner-critical h1 { color: var(--red); }
-.banner-red { background: var(--red-bg); border: 2px solid var(--red); }
-.banner-red h1 { color: var(--red); }
-.banner-yellow { background: var(--yellow-bg); border: 2px solid var(--yellow); }
-.banner-yellow h1 { color: var(--yellow); }
-.banner-green { background: var(--green-bg); border: 2px solid var(--green); }
-.banner-green h1 { color: var(--green); }
-.banner h1 { font-size: 2.2em; margin-bottom: 8px; font-weight: 800; letter-spacing: 0.04em; }
-.banner p { font-size: 1.1em; opacity: 0.9; }
-@keyframes pulse-border {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
-  50% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
-}
+/* ── Topbar ── */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:rgba(13,17,23,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;padding:0 20px;}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:1440px;margin:0 auto;}
+.topbar-logo{font-size:.85em;font-weight:700;color:var(--fg-muted);letter-spacing:.05em;}
+.topbar-actions{display:flex;gap:6px;align-items:center;}
 
-/* Summary */
-.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
-.stat-card .value { font-size: 2em; font-weight: bold; }
-.stat-card .label { font-size: 0.85em; opacity: 0.7; margin-top: 4px; }
+/* ── Layout ── */
+.page-layout{display:flex;max-width:1440px;margin:0 auto;padding:20px;gap:20px;align-items:flex-start;}
+.main-content{flex:1;min-width:0;}
 
-/* Cards */
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
-.card h2 { font-size: 1.3em; margin-bottom: 12px; color: var(--blue); }
-.card h3 { font-size: 1.1em; margin-bottom: 8px; }
+/* ── TOC ── */
+.toc{width:196px;flex-shrink:0;position:sticky;top:calc(var(--topbar-h) + 14px);max-height:calc(100vh - var(--topbar-h) - 28px);overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 0;}
+.toc::-webkit-scrollbar{width:4px;}
+.toc::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.toc-title{font-size:.7em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-muted);padding:0 12px 8px;border-bottom:1px solid var(--border);margin-bottom:4px;}
+.toc-link{display:block;padding:4px 12px 4px 10px;font-size:.8em;color:var(--fg-muted);text-decoration:none;border-left:2px solid transparent;transition:color .15s,border-color .15s,background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.toc-link:hover{color:var(--fg);background:rgba(255,255,255,.04);}
+.toc-link.active{color:var(--blue);border-left-color:var(--blue);background:rgba(88,166,255,.08);font-weight:600;}
+.toc-link.sub{padding-left:22px;font-size:.76em;}
+.toc-sep{height:1px;background:var(--border);margin:6px 0;}
 
-/* Badges */
-.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; text-transform: uppercase; }
-.confidence-confirmed { background: #dc2626; color: #fff; }
-.confidence-high { background: #d97706; color: #fff; }
-.confidence-medium { background: #ca8a04; color: #fff; }
-.confidence-low { background: #388bfd; color: #fff; }
-.confidence-info { background: var(--border); color: var(--fg); }
-.risk-critical { background: #dc2626; color: #fff; }
-.risk-high { background: #d97706; color: #fff; }
-.risk-medium { background: #ca8a04; color: #fff; }
-.risk-low { background: var(--border); color: var(--fg); }
+/* ── Banner ── */
+.banner{padding:30px 24px;border-radius:8px;margin-bottom:14px;text-align:center;}
+.banner-critical{background:#450a0a;border:3px solid var(--red);animation:pulse-border 2s ease-in-out infinite;}
+.banner-critical h1{color:var(--red);}
+.banner-red{background:var(--red-bg);border:2px solid var(--red);}
+.banner-red h1{color:var(--red);}
+.banner-yellow{background:var(--yellow-bg);border:2px solid var(--yellow);}
+.banner-yellow h1{color:var(--yellow);}
+.banner-green{background:var(--green-bg);border:2px solid var(--green);}
+.banner-green h1{color:var(--green);}
+.banner h1{font-size:1.9em;margin-bottom:6px;font-weight:800;letter-spacing:.04em;}
+.banner p{font-size:1.02em;opacity:.9;}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.5);}50%{box-shadow:0 0 0 10px rgba(220,38,38,0);}}
 
-/* Evidence */
-.evidence-list { list-style: none; padding: 0; }
-.evidence-list li { padding: 6px 0; border-bottom: 1px solid var(--border); font-family: monospace; font-size: 0.9em; }
-.evidence-list li:last-child { border-bottom: none; }
+/* ── Summary stats ── */
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 10px;text-align:center;}
+.stat-card .value{font-size:1.7em;font-weight:700;}
+.stat-card .label{font-size:.75em;opacity:.55;margin-top:2px;}
 
-/* MITRE tags */
-.mitre-tag { display: inline-block; background: #1f2937; border: 1px solid var(--blue); color: var(--blue); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
+/* ── Section ── */
+.report-section{margin-bottom:12px;scroll-margin-top:calc(var(--topbar-h) + 10px);}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 16px;cursor:pointer;user-select:none;transition:background .15s;}
+.sec-hdr:hover{background:var(--card2);}
+.sec-hdr.is-open{border-radius:8px 8px 0 0;border-bottom-color:transparent;}
+.sec-hdr h2{font-size:1.05em;color:var(--blue);font-weight:600;}
+.hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.chevron{font-size:.9em;color:var(--fg-muted);transition:transform .2s;display:inline-block;margin-left:4px;}
+.chevron.closed{transform:rotate(-90deg);}
+.sec-body{background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;padding:16px;overflow:hidden;}
+.sec-body.hidden{display:none;}
 
-/* Actions */
-.action-list { list-style: decimal; padding-left: 20px; }
-.action-list li { padding: 4px 0; }
+/* ── Finding cards ── */
+.finding-card{border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;scroll-margin-top:calc(var(--topbar-h) + 10px);}
+.finding-card:last-child{margin-bottom:0;}
+.finding-card.sev-confirmed{border-left:3px solid #dc2626;}
+.finding-card.sev-likely   {border-left:3px solid #d97706;}
+.finding-card.sev-suspected{border-left:3px solid #ca8a04;}
+.finding-card.sev-informational{border-left:3px solid var(--border);}
+.finding-hdr{display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;user-select:none;background:rgba(255,255,255,.025);transition:background .15s;flex-wrap:wrap;}
+.finding-hdr:hover{background:rgba(255,255,255,.05);}
+.finding-title{flex:1;font-weight:600;font-size:.92em;min-width:120px;}
+.finding-body{padding:14px;border-top:1px solid var(--border);}
+.finding-body.hidden{display:none;}
 
-/* IoC table */
-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-th { background: rgba(255,255,255,0.05); font-weight: 600; }
-td { font-family: monospace; font-size: 0.9em; }
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.72em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+.confidence-confirmed{background:#dc2626;color:#fff;}
+.confidence-high{background:#d97706;color:#fff;}
+.confidence-medium{background:#ca8a04;color:#fff;}
+.confidence-low{background:#388bfd;color:#fff;}
+.confidence-info{background:var(--border);color:var(--fg);}
+.risk-critical{background:#dc2626;color:#fff;}
+.risk-high{background:#d97706;color:#fff;}
+.risk-medium{background:#ca8a04;color:#fff;}
+.risk-low{background:var(--border);color:var(--fg);}
 
-/* Collapsible */
-details { margin-top: 8px; }
-details summary { cursor: pointer; color: var(--blue); font-size: 0.9em; }
-details summary:hover { text-decoration: underline; }
+/* ── Content elements ── */
+.field-lbl{font-size:.77em;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--fg-muted);margin:12px 0 4px;}
+.field-lbl:first-child{margin-top:0;}
+.evidence-list{list-style:none;padding:0;}
+.evidence-list li{padding:5px 0;border-bottom:1px solid var(--border);font-family:monospace;font-size:.86em;}
+.evidence-list li:last-child{border-bottom:none;}
+.mitre-tag{display:inline-block;background:#1f2937;border:1px solid var(--blue);color:var(--blue);padding:2px 6px;border-radius:4px;font-size:.78em;margin:2px;}
+.action-list{list-style:decimal;padding-left:20px;}
+.action-list li{padding:3px 0;font-size:.9em;}
 
-/* Reasoning chain */
-.reasoning { background: rgba(255,255,255,0.03); border-radius: 4px; padding: 12px; margin-top: 8px; font-size: 0.9em; }
-.reasoning dt { font-weight: bold; color: var(--blue); margin-top: 8px; }
-.reasoning dt:first-child { margin-top: 0; }
-.reasoning dd { margin-left: 16px; }
+/* ── Reasoning ── */
+.reasoning{background:rgba(255,255,255,.03);border-radius:4px;padding:12px;font-size:.88em;}
+.reasoning dt{font-weight:700;color:var(--blue);margin-top:8px;font-size:.82em;text-transform:uppercase;letter-spacing:.04em;}
+.reasoning dt:first-child{margin-top:0;}
+.reasoning dd{margin-left:12px;margin-top:2px;}
 
-/* Timeline */
-.timeline-item { display: flex; gap: 12px; padding: 8px 0; border-left: 2px solid var(--border); padding-left: 16px; margin-left: 8px; }
-.timeline-time { font-family: monospace; font-size: 0.85em; min-width: 180px; color: var(--blue); }
-.timeline-event { flex: 1; }
+/* ── Timeline ── */
+.timeline{position:relative;padding-left:20px;}
+.timeline::before{content:'';position:absolute;left:6px;top:4px;bottom:4px;width:2px;background:var(--border);}
+.tl-item{position:relative;padding:6px 0 6px 14px;}
+.tl-item::before{content:'';position:absolute;left:-15px;top:13px;width:8px;height:8px;border-radius:50%;background:var(--blue);border:2px solid var(--bg);}
+.tl-time{font-family:monospace;font-size:.8em;color:var(--blue);}
+.tl-event{margin-top:2px;font-size:.9em;}
 
-/* Kill Chain phase badges (UI-004) */
-.kc-initial   { background: #1d4ed8; color: #fff; padding: 2px 7px; border-radius: 4px; font-size: 0.78em; white-space: nowrap; }
-.kc-execution { background: #b45309; color: #fff; padding: 2px 7px; border-radius: 4px; font-size: 0.78em; white-space: nowrap; }
-.kc-evasion   { background: #065f46; color: #fff; padding: 2px 7px; border-radius: 4px; font-size: 0.78em; white-space: nowrap; }
-.kc-lateral   { background: #7c3aed; color: #fff; padding: 2px 7px; border-radius: 4px; font-size: 0.78em; white-space: nowrap; }
-.kc-impact    { background: #dc2626; color: #fff; padding: 2px 7px; border-radius: 4px; font-size: 0.78em; white-space: nowrap; }
-.kc-default   { background: var(--border); color: var(--fg); padding: 2px 7px; border-radius: 4px; font-size: 0.78em; white-space: nowrap; }
+/* ── Tables ── */
+table{width:100%;border-collapse:collapse;font-size:.88em;}
+th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);}
+th{background:rgba(255,255,255,.04);font-weight:600;font-size:.78em;text-transform:uppercase;letter-spacing:.04em;color:var(--fg-muted);}
+td{font-family:monospace;font-size:.84em;}
+tr:last-child td{border-bottom:none;}
 
-/* Collection failure kind badges (ARCH-004) */
-.fk-timeout    { background: #b45309; color: #fff; }
-.fk-permission { background: #dc2626; color: #fff; }
-.fk-script     { background: #ca8a04; color: #fff; }
-.fk-notfound   { background: #6b7280; color: #fff; }
-.fk-unknown    { background: var(--border); color: var(--fg); }
+/* ── Details / inner collapsibles ── */
+details{margin-top:10px;}
+details summary{cursor:pointer;color:var(--blue);font-size:.87em;padding:3px 0;list-style:none;display:flex;align-items:center;gap:4px;}
+details summary::-webkit-details-marker{display:none;}
+details summary::before{content:'▸';font-size:.85em;flex-shrink:0;}
+details[open] summary::before{content:'▾';}
+details summary:hover{text-decoration:underline;}
 
-/* Sigma rule level badges (SIG-001) */
-.sigma-critical { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
-.sigma-high     { background: #7c2d12; color: #fdba74; border: 1px solid #ea580c; }
-.sigma-medium   { background: #713f12; color: #fde68a; border: 1px solid #d97706; }
-.sigma-low      { background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f6; }
-.sigma-info     { background: var(--card); color: var(--fg-muted); border: 1px solid var(--border); }
-.sigma-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
-.sigma-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.sigma-event { font-family: monospace; font-size: 0.8em; color: var(--fg-muted); margin-top: 8px; white-space: pre-wrap; word-break: break-all; }
+/* ── Kill chain ── */
+.kc-initial  {background:#1d4ed8;color:#fff;padding:2px 6px;border-radius:4px;font-size:.74em;white-space:nowrap;}
+.kc-execution{background:#b45309;color:#fff;padding:2px 6px;border-radius:4px;font-size:.74em;white-space:nowrap;}
+.kc-evasion  {background:#065f46;color:#fff;padding:2px 6px;border-radius:4px;font-size:.74em;white-space:nowrap;}
+.kc-lateral  {background:#7c3aed;color:#fff;padding:2px 6px;border-radius:4px;font-size:.74em;white-space:nowrap;}
+.kc-impact   {background:#dc2626;color:#fff;padding:2px 6px;border-radius:4px;font-size:.74em;white-space:nowrap;}
+.kc-default  {background:var(--border);color:var(--fg);padding:2px 6px;border-radius:4px;font-size:.74em;white-space:nowrap;}
 
-/* Raw JSON viewer (UI-007) */
-.json-viewer { background: rgba(0,0,0,0.3); border-radius: 4px; padding: 12px; font-family: monospace; font-size: 0.82em; overflow-x: auto; white-space: pre; max-height: 400px; overflow-y: auto; margin-top: 8px; }
-.json-key  { color: #60a5fa; }
-.json-str  { color: #34d399; }
-.json-num  { color: #fb923c; }
-.json-bool { color: #a78bfa; }
-.json-null { color: #9ca3af; }
+/* ── Failure kind ── */
+.fk-timeout   {background:#b45309;color:#fff;}
+.fk-permission{background:#dc2626;color:#fff;}
+.fk-script    {background:#ca8a04;color:#fff;}
+.fk-notfound  {background:#6b7280;color:#fff;}
+.fk-unknown   {background:var(--border);color:var(--fg);}
 
-/* Export button (UI-006) */
-.btn { display: inline-block; padding: 5px 12px; border-radius: 6px; font-size: 0.82em; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--fg); margin-left: 8px; }
-.btn:hover { background: rgba(255,255,255,0.08); border-color: var(--blue); color: var(--blue); }
+/* ── Sigma ── */
+.sigma-critical{background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626;}
+.sigma-high    {background:#7c2d12;color:#fdba74;border:1px solid #ea580c;}
+.sigma-medium  {background:#713f12;color:#fde68a;border:1px solid #d97706;}
+.sigma-low     {background:#1e3a5f;color:#93c5fd;border:1px solid #3b82f6;}
+.sigma-info    {background:var(--card);color:var(--fg-muted);border:1px solid var(--border);}
+.sigma-card{border:1px solid var(--border);border-radius:6px;padding:11px 13px;margin-bottom:8px;}
+.sigma-card:last-child{margin-bottom:0;}
+.sigma-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+.sigma-event{font-family:monospace;font-size:.78em;color:var(--fg-muted);margin-top:8px;white-space:pre-wrap;word-break:break-all;}
 
-/* Light theme overrides (UI-001) */
-[data-theme="light"] {
-  --bg: #ffffff; --fg: #1f2328; --card: #f6f8fa; --border: #d0d7de;
-  --blue: #0969da;
-  --red-bg: #fff0ee; --yellow-bg: #fff8e5; --green-bg: #f0fff4;
-}
-[data-theme="light"] body { background: var(--bg); color: var(--fg); }
-[data-theme="light"] .reasoning { background: rgba(0,0,0,0.04); }
-[data-theme="light"] pre { background: rgba(0,0,0,0.05) !important; }
+/* ── JSON viewer ── */
+.json-viewer{background:rgba(0,0,0,.3);border-radius:4px;padding:12px;font-family:monospace;font-size:.8em;overflow-x:auto;white-space:pre;max-height:360px;overflow-y:auto;margin-top:8px;}
+.json-key{color:#60a5fa;}.json-str{color:#34d399;}.json-num{color:#fb923c;}.json-bool{color:#a78bfa;}.json-null{color:#9ca3af;}
 
-/* Theme toggle button */
-.theme-toggle { position: fixed; top: 14px; right: 14px; z-index: 100; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--fg); cursor: pointer; font-size: 0.82em; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
-.theme-toggle:hover { border-color: var(--blue); color: var(--blue); }
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:5px;font-size:.76em;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--fg-muted);transition:all .15s;white-space:nowrap;}
+.btn:hover{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.1);}
+.btn.ok{border-color:var(--green);color:var(--green);}
+.btn-solid{background:var(--card2);color:var(--fg);}
 
-/* Footer */
-.footer { text-align: center; padding: 24px; opacity: 0.5; font-size: 0.85em; }
+/* ── Footer ── */
+.footer{text-align:center;padding:28px 16px;opacity:.4;font-size:.8em;}
+
+/* ── Light theme ── */
+[data-theme="light"]{--bg:#fff;--fg:#1f2328;--card:#f6f8fa;--border:#d0d7de;--blue:#0969da;--fg-muted:#636c76;--red-bg:#fff0ee;--yellow-bg:#fff8e5;--green-bg:#f0fff4;--card2:#eaeef2;}
+[data-theme="light"] .topbar{background:rgba(255,255,255,.96);}
+[data-theme="light"] .reasoning{background:rgba(0,0,0,.03);}
+[data-theme="light"] .json-viewer{background:rgba(0,0,0,.04);}
+[data-theme="light"] .tl-item::before{border-color:var(--bg);}
+
+/* ── Responsive ── */
+@media(max-width:880px){.toc{display:none;}.page-layout{padding:12px;}}
 </style>
 </head>
 <body>
-<button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">☀ Light</button>
-<div class="container">
 
-<!-- Isolation Banner -->
-<div class="banner {{bannerClass .Isolation}}">
+<!-- Topbar -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="topbar-logo">system-coroner / {{.Hostname}}</span>
+    <div class="topbar-actions">
+      <button class="btn btn-solid" id="btn-copy-all" onclick="copyAllReport()">Copy Report</button>
+      <button class="btn btn-solid theme-toggle" id="theme-btn" onclick="toggleTheme()">☀ Light</button>
+    </div>
+  </div>
+</header>
+
+<div class="page-layout">
+<main class="main-content">
+
+<!-- Banner -->
+<div id="s-banner" class="banner {{bannerClass .Isolation}}" style="scroll-margin-top:calc(var(--topbar-h) + 10px)">
   {{if .Isolation.Isolate}}
   <h1>{{if eq .Isolation.Urgency "immediate"}}ISOLATE IMMEDIATELY{{else}}ISOLATION RECOMMENDED{{end}}</h1>
   {{else if eq .Isolation.Banner "yellow"}}
@@ -160,307 +210,479 @@ details summary:hover { text-decoration: underline; }
 </div>
 
 <!-- Summary Stats -->
-<div class="summary">
-  <div class="stat-card">
-    <div class="value">{{.Hostname}}</div>
-    <div class="label">Server</div>
-  </div>
+<div id="s-summary" class="summary" style="scroll-margin-top:calc(var(--topbar-h) + 10px)">
   <div class="stat-card">
     <div class="value">{{.TotalChecks}}</div>
-    <div class="label">Checks Executed</div>
+    <div class="label">Checks</div>
   </div>
   <div class="stat-card">
-    <div class="value" style="color: #dc2626;">{{.ConfidenceSummary.Confirmed}}</div>
+    <div class="value" style="color:#dc2626">{{.ConfidenceSummary.Confirmed}}</div>
     <div class="label">Confirmed</div>
   </div>
   <div class="stat-card">
-    <div class="value" style="color: #d97706;">{{.ConfidenceSummary.High}}</div>
-    <div class="label">High</div>
+    <div class="value" style="color:#d97706">{{.ConfidenceSummary.High}}</div>
+    <div class="label">Likely</div>
   </div>
   <div class="stat-card">
-    <div class="value" style="color: #ca8a04;">{{.ConfidenceSummary.Medium}}</div>
-    <div class="label">Medium</div>
+    <div class="value" style="color:#ca8a04">{{.ConfidenceSummary.Medium}}</div>
+    <div class="label">Suspected</div>
   </div>
   <div class="stat-card">
-    <div class="value" style="color: var(--blue);">{{.ConfidenceSummary.Low}}</div>
+    <div class="value" style="color:var(--blue)">{{.ConfidenceSummary.Low}}</div>
     <div class="label">Low</div>
   </div>
   <div class="stat-card">
-    <div class="value" style="color: var(--green);">{{.ConfidenceSummary.Clean}}</div>
+    <div class="value" style="color:var(--green)">{{.ConfidenceSummary.Clean}}</div>
     <div class="label">Clean</div>
   </div>
 </div>
 
-<!-- Verdict (if available) -->
+<!-- Verdict -->
 {{if .Verdict}}
-<div class="card">
-  <h2>Overall Verdict</h2>
-  <p><strong>Status:</strong> {{.Verdict.OverallVerdict.Status}}</p>
-  <p><strong>Confidence:</strong> {{.Verdict.OverallVerdict.Confidence}}</p>
-  <p><strong>Recommendation:</strong> {{.Verdict.OverallVerdict.Recommendation}}</p>
-  <p>{{.Verdict.OverallVerdict.Summary}}</p>
-</div>
+<section class="report-section" id="s-verdict">
+  <div class="sec-hdr is-open" onclick="toggleSec('verdict')">
+    <h2>Overall Verdict</h2>
+    <div class="hdr-right">
+      <button class="btn" onclick="event.stopPropagation();copySection('verdict',this)">Copy</button>
+      <span class="chevron" id="chev-verdict">▾</span>
+    </div>
+  </div>
+  <div class="sec-body" id="body-verdict">
+    <p><strong>Status:</strong> {{.Verdict.OverallVerdict.Status}}</p>
+    <p style="margin-top:5px"><strong>Confidence:</strong> {{.Verdict.OverallVerdict.Confidence}}</p>
+    <p style="margin-top:5px"><strong>Recommendation:</strong> {{.Verdict.OverallVerdict.Recommendation}}</p>
+    <p style="margin-top:8px;opacity:.9">{{.Verdict.OverallVerdict.Summary}}</p>
+  </div>
+</section>
 {{end}}
 
 <!-- Timeline -->
 {{if .Verdict}}{{if .Verdict.Timeline}}
-<div class="card">
-  <h2>Attack Timeline</h2>
-  {{range .Verdict.Timeline}}
-  <div class="timeline-item">
-    <div class="timeline-time">{{.Timestamp}}</div>
-    <div class="timeline-event">
-      {{.Event}}
-      <span class="{{killChainClass .KillChainPhase}}">{{.KillChainPhase}}</span>
+<section class="report-section" id="s-timeline">
+  <div class="sec-hdr is-open" onclick="toggleSec('timeline')">
+    <h2>Attack Timeline</h2>
+    <div class="hdr-right">
+      <button class="btn" onclick="event.stopPropagation();copySection('timeline',this)">Copy</button>
+      <span class="chevron" id="chev-timeline">▾</span>
     </div>
   </div>
-  {{end}}
-</div>
+  <div class="sec-body" id="body-timeline">
+    <div class="timeline">
+      {{range .Verdict.Timeline}}
+      <div class="tl-item">
+        <div class="tl-time">{{.Timestamp}}</div>
+        <div class="tl-event">
+          {{.Event}}
+          <span class="{{killChainClass .KillChainPhase}}" style="margin-left:6px">{{.KillChainPhase}}</span>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
 {{end}}{{end}}
 
 <!-- Findings -->
-{{range .Findings}}
-<div class="card">
-  <h2>
-    <span class="badge {{confidenceClass .IntrusionConfidence}}">{{.IntrusionConfidence}}</span>
-    <span class="badge {{riskClass .RiskLevel}}">{{.RiskLevel}}</span>
-    {{.Title}}
-  </h2>
-  <p><strong>Check:</strong> {{.Check}}</p>
-  <p><strong>Attack Scenario:</strong> {{.AttackScenario}}</p>
+{{if .Findings}}
+<section class="report-section" id="s-findings">
+  <div class="sec-hdr is-open" onclick="toggleSec('findings')">
+    <h2>Findings <span style="font-size:.8em;font-weight:400;color:var(--fg-muted)">({{len .Findings}})</span></h2>
+    <div class="hdr-right">
+      <button class="btn" onclick="event.stopPropagation();copySection('findings',this)">Copy</button>
+      <span class="chevron" id="chev-findings">▾</span>
+    </div>
+  </div>
+  <div class="sec-body" id="body-findings">
+    {{range .Findings}}
+    <div class="finding-card sev-{{.IntrusionConfidence}}" id="f-{{.Check}}">
+      <div class="finding-hdr" onclick="toggleFinding('{{.Check}}')">
+        <span class="badge {{confidenceClass .IntrusionConfidence}}">{{.IntrusionConfidence}}</span>
+        <span class="badge {{riskClass .RiskLevel}}">{{.RiskLevel}}</span>
+        <span class="finding-title">{{.Title}}</span>
+        <span class="chevron" id="chev-f-{{.Check}}">▾</span>
+      </div>
+      <div class="finding-body" id="fbody-{{.Check}}">
+        <div class="field-lbl">Check</div>
+        <p style="font-family:monospace;font-size:.86em">{{.Check}}</p>
 
-  {{if .MITRE}}
-  <p><strong>MITRE ATT&CK:</strong>
-    {{range .MITRE}}<span class="mitre-tag">{{.}}</span>{{end}}
-  </p>
-  {{end}}
+        <div class="field-lbl">Attack Scenario</div>
+        <p style="font-size:.91em">{{.AttackScenario}}</p>
 
-  {{if .Evidence}}
-  <h3>Evidence</h3>
-  <ul class="evidence-list">
-    {{range .Evidence}}<li>{{.}}</li>{{end}}
-  </ul>
-  {{end}}
+        {{if .MITRE}}
+        <div class="field-lbl">MITRE ATT&CK</div>
+        <p>{{range .MITRE}}<span class="mitre-tag">{{.}}</span>{{end}}</p>
+        {{end}}
 
-  {{if .ImmediateActions}}
-  <h3>Immediate Actions</h3>
-  <ol class="action-list">
-    {{range .ImmediateActions}}<li>{{.}}</li>{{end}}
-  </ol>
-  {{end}}
+        {{if .Evidence}}
+        <div class="field-lbl">Evidence</div>
+        <ul class="evidence-list">
+          {{range .Evidence}}<li>{{.}}</li>{{end}}
+        </ul>
+        {{end}}
 
-  {{if .ForensicNextSteps}}
-  <details>
-    <summary>Forensic Next Steps</summary>
-    <ol class="action-list">
-      {{range .ForensicNextSteps}}<li>{{.}}</li>{{end}}
-    </ol>
-  </details>
-  {{end}}
+        {{if .ImmediateActions}}
+        <div class="field-lbl">Immediate Actions</div>
+        <ol class="action-list">
+          {{range .ImmediateActions}}<li>{{.}}</li>{{end}}
+        </ol>
+        {{end}}
 
-  <details>
-    <summary>Reasoning Chain</summary>
-    <dl class="reasoning">
-      <dt>Observation</dt><dd>{{.ReasoningChain.Observation}}</dd>
-      <dt>Baseline</dt><dd>{{.ReasoningChain.Baseline}}</dd>
-      <dt>Deviation</dt><dd>{{.ReasoningChain.Deviation}}</dd>
-      <dt>Context</dt><dd>{{.ReasoningChain.Context}}</dd>
-      <dt>Conclusion</dt><dd>{{.ReasoningChain.Conclusion}}</dd>
-    </dl>
-  </details>
+        {{if .ForensicNextSteps}}
+        <details>
+          <summary>Forensic Next Steps</summary>
+          <ol class="action-list" style="margin-top:8px">
+            {{range .ForensicNextSteps}}<li>{{.}}</li>{{end}}
+          </ol>
+        </details>
+        {{end}}
 
-  {{$rawJSON := index $.RawCheckData .Check}}
-  {{if $rawJSON}}
-  <details>
-    <summary>Raw Evidence <button class="btn" onclick="copyJsonViewer('rv-{{.Check}}');event.stopPropagation()">Copy</button></summary>
-    <pre class="json-viewer" id="rv-{{.Check}}">{{$rawJSON}}</pre>
-  </details>
-  {{end}}
-</div>
+        <details>
+          <summary>Reasoning Chain</summary>
+          <dl class="reasoning" style="margin-top:8px">
+            <dt>Observation</dt><dd>{{.ReasoningChain.Observation}}</dd>
+            <dt>Baseline</dt><dd>{{.ReasoningChain.Baseline}}</dd>
+            <dt>Deviation</dt><dd>{{.ReasoningChain.Deviation}}</dd>
+            <dt>Context</dt><dd>{{.ReasoningChain.Context}}</dd>
+            <dt>Conclusion</dt><dd>{{.ReasoningChain.Conclusion}}</dd>
+          </dl>
+        </details>
+
+        {{$rawJSON := index $.RawCheckData .Check}}
+        {{if $rawJSON}}
+        <details>
+          <summary>Raw Evidence <button class="btn" onclick="event.stopPropagation();copyJsonViewer('rv-{{.Check}}',this)" style="margin-left:6px">Copy</button></summary>
+          <pre class="json-viewer" id="rv-{{.Check}}">{{$rawJSON}}</pre>
+        </details>
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+</section>
 {{end}}
 
-<!-- Raw Findings (parse failures) -->
+<!-- Analysis Failures -->
 {{if .RawFindings}}
-<div class="card">
-  <h2>Analysis Failures</h2>
-  <p>The following checks could not be parsed. Raw output is preserved for manual review.</p>
-  {{range .RawFindings}}
-  <details>
-    <summary>{{.CheckID}} — {{.ParseError}}</summary>
-    <pre style="overflow-x:auto; padding:12px; background:rgba(0,0,0,0.3); border-radius:4px; font-size:0.85em;">{{.RawOutput}}</pre>
-  </details>
-  {{end}}
-</div>
+<section class="report-section" id="s-raw">
+  <div class="sec-hdr" onclick="toggleSec('raw')">
+    <h2>Analysis Failures</h2>
+    <div class="hdr-right">
+      <span class="chevron closed" id="chev-raw">▾</span>
+    </div>
+  </div>
+  <div class="sec-body hidden" id="body-raw">
+    <p style="margin-bottom:12px;opacity:.75;font-size:.9em">The following checks could not be parsed. Raw output is preserved for manual review.</p>
+    {{range .RawFindings}}
+    <details>
+      <summary>{{.CheckID}} — {{.ParseError}}</summary>
+      <pre style="overflow-x:auto;padding:12px;background:rgba(0,0,0,.3);border-radius:4px;font-size:.82em;margin-top:8px;white-space:pre-wrap">{{.RawOutput}}</pre>
+    </details>
+    {{end}}
+  </div>
+</section>
 {{end}}
 
-<!-- IoC Table -->
-{{if .IoCs}}
-<div class="card">
-  <h2>Indicators of Compromise (IoC)
-    <button class="btn" onclick="downloadIoCs('csv')">Export CSV</button>
-    <button class="btn" onclick="downloadIoCs('json')">Export JSON</button>
-  </h2>
-  <table id="ioc-table">
-    <thead>
-      <tr><th>Type</th><th>Value</th><th>Source</th></tr>
-    </thead>
-    <tbody>
-      {{range .IoCs}}
-      <tr><td>{{.Type}}</td><td>{{.Value}}</td><td>{{.Context}}</td></tr>
+<!-- Sigma Matches -->
+{{if .SigmaMatches}}
+<section class="report-section" id="s-sigma">
+  <div class="sec-hdr is-open" onclick="toggleSec('sigma')">
+    <h2>Sigma Rule Matches <span class="badge sigma-high" style="font-size:.68em;vertical-align:middle;margin-left:6px">{{len .SigmaMatches}} hit{{if gt (len .SigmaMatches) 1}}s{{end}}</span></h2>
+    <div class="hdr-right">
+      <button class="btn" onclick="event.stopPropagation();copySection('sigma',this)">Copy</button>
+      <span class="chevron" id="chev-sigma">▾</span>
+    </div>
+  </div>
+  <div class="sec-body" id="body-sigma">
+    <p style="margin-bottom:12px;opacity:.7;font-size:.88em">Deterministic Sigma rule detections — independent of LLM analysis.</p>
+    {{range .SigmaMatches}}
+    <div class="sigma-card">
+      <div class="sigma-hdr">
+        <span class="badge {{sigmaLevelClass .Level}}">{{.Level}}</span>
+        <strong>{{.RuleTitle}}</strong>
+        <span style="font-family:monospace;font-size:.78em;color:var(--fg-muted)">check: {{.CheckID}}</span>
+        {{if .RuleID}}<span style="font-family:monospace;font-size:.74em;color:var(--fg-muted)">id: {{.RuleID}}</span>{{end}}
+      </div>
+      {{if .Event}}
+      <details>
+        <summary>Matched Event</summary>
+        <pre class="sigma-event">{{range $k,$v := .Event}}{{$k}}: {{$v}}
+{{end}}</pre>
+      </details>
       {{end}}
-    </tbody>
-  </table>
-</div>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+<!-- IoCs -->
+{{if .IoCs}}
+<section class="report-section" id="s-iocs">
+  <div class="sec-hdr is-open" onclick="toggleSec('iocs')">
+    <h2>Indicators of Compromise</h2>
+    <div class="hdr-right">
+      <button class="btn" onclick="event.stopPropagation();downloadIoCs('csv')">Export CSV</button>
+      <button class="btn" onclick="event.stopPropagation();downloadIoCs('json')">Export JSON</button>
+      <button class="btn" onclick="event.stopPropagation();copySection('iocs',this)">Copy</button>
+      <span class="chevron" id="chev-iocs">▾</span>
+    </div>
+  </div>
+  <div class="sec-body" id="body-iocs">
+    <table id="ioc-table">
+      <thead><tr><th>Type</th><th>Value</th><th>Source</th></tr></thead>
+      <tbody>
+        {{range .IoCs}}
+        <tr><td>{{.Type}}</td><td>{{.Value}}</td><td>{{.Context}}</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
 {{end}}
 
 <!-- Data Gaps -->
 {{if .Verdict}}{{if .Verdict.DataGaps}}
-<div class="card">
-  <h2>Data Gaps</h2>
-  <ul>
-    {{range .Verdict.DataGaps}}<li>{{.}}</li>{{end}}
-  </ul>
-</div>
+<section class="report-section" id="s-gaps">
+  <div class="sec-hdr" onclick="toggleSec('gaps')">
+    <h2>Data Gaps</h2>
+    <div class="hdr-right">
+      <span class="chevron closed" id="chev-gaps">▾</span>
+    </div>
+  </div>
+  <div class="sec-body hidden" id="body-gaps">
+    <ul style="padding-left:18px">
+      {{range .Verdict.DataGaps}}<li style="padding:3px 0;font-size:.9em">{{.}}</li>{{end}}
+    </ul>
+  </div>
+</section>
 {{end}}{{end}}
 
-<!-- Sigma Rule Matches (SIG-001) -->
-{{if .SigmaMatches}}
-<div class="card">
-  <h2>Sigma Rule Matches <span class="badge sigma-high" style="font-size:0.7em; vertical-align:middle;">{{len .SigmaMatches}} hit{{if gt (len .SigmaMatches) 1}}s{{end}}</span></h2>
-  <p style="margin-bottom:14px; opacity:0.8;">Sigma 탐지 규칙에 매칭된 항목입니다. LLM 분석과 독립적인 결정론적 탐지 결과입니다.</p>
-  {{range .SigmaMatches}}
-  <div class="sigma-card">
-    <div class="sigma-card-header">
-      <span class="badge {{sigmaLevelClass .Level}}">{{.Level}}</span>
-      <strong>{{.RuleTitle}}</strong>
-      <span style="font-family:monospace;font-size:0.82em;color:var(--fg-muted);">check: {{.CheckID}}</span>
-      {{if .RuleID}}<span style="font-family:monospace;font-size:0.78em;color:var(--fg-muted);">id: {{.RuleID}}</span>{{end}}
-    </div>
-    {{if .Event}}
-    <details>
-      <summary style="cursor:pointer;font-size:0.85em;color:var(--fg-muted);">Matched Event</summary>
-      <pre class="sigma-event">{{range $k,$v := .Event}}{{$k}}: {{$v}}
-{{end}}</pre>
-    </details>
-    {{end}}
-  </div>
-  {{end}}
-</div>
-{{end}}
-
-<!-- Collection Failures (UI-011) -->
+<!-- Collection Failures -->
 {{if .CollectionFailures}}
-<div class="card">
-  <h2>Collection Failures</h2>
-  <p style="margin-bottom:12px; opacity:0.8;">다음 항목은 스크립트 실행에 실패하여 수집되지 않았습니다. 해당 영역의 분석 정확도가 낮을 수 있습니다.</p>
-  <table>
-    <thead>
-      <tr><th>Check</th><th>ID</th><th>Kind</th><th>Error</th></tr>
-    </thead>
-    <tbody>
-      {{range .CollectionFailures}}
-      <tr>
-        <td>{{if .CheckName}}{{.CheckName}}{{else}}{{.CheckID}}{{end}}</td>
-        <td style="font-family:monospace;font-size:0.85em;">{{.CheckID}}</td>
-        <td><span class="badge {{failureKindClass .FailureKind}}">{{.FailureKind}}</span></td>
-        <td style="font-family:monospace;font-size:0.85em;color:var(--red);">{{.Error}}</td>
-      </tr>
-      {{end}}
-    </tbody>
-  </table>
-</div>
+<section class="report-section" id="s-failures">
+  <div class="sec-hdr" onclick="toggleSec('failures')">
+    <h2>Collection Failures</h2>
+    <div class="hdr-right">
+      <span class="chevron closed" id="chev-failures">▾</span>
+    </div>
+  </div>
+  <div class="sec-body hidden" id="body-failures">
+    <p style="margin-bottom:12px;opacity:.7;font-size:.88em">The following checks failed to collect data. Analysis accuracy may be reduced for these areas.</p>
+    <table>
+      <thead><tr><th>Check</th><th>ID</th><th>Kind</th><th>Error</th></tr></thead>
+      <tbody>
+        {{range .CollectionFailures}}
+        <tr>
+          <td style="font-family:sans-serif">{{if .CheckName}}{{.CheckName}}{{else}}{{.CheckID}}{{end}}</td>
+          <td>{{.CheckID}}</td>
+          <td><span class="badge {{failureKindClass .FailureKind}}">{{.FailureKind}}</span></td>
+          <td style="color:var(--red);word-break:break-word;max-width:300px">{{.Error}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
 {{end}}
 
 <!-- Evidence Integrity -->
 {{if .EvidenceHashes}}
-<div class="card">
-  <h2>Evidence Integrity (SHA-256)</h2>
-  <table>
-    <thead>
-      <tr><th>File</th><th>SHA-256</th><th>Size</th></tr>
-    </thead>
-    <tbody>
-      {{range .EvidenceHashes}}
-      <tr><td>{{.File}}</td><td style="font-size:0.8em;">{{.SHA256}}</td><td>{{.Size}} B</td></tr>
-      {{end}}
-    </tbody>
-  </table>
-</div>
+<section class="report-section" id="s-integrity">
+  <div class="sec-hdr" onclick="toggleSec('integrity')">
+    <h2>Evidence Integrity (SHA-256)</h2>
+    <div class="hdr-right">
+      <span class="chevron closed" id="chev-integrity">▾</span>
+    </div>
+  </div>
+  <div class="sec-body hidden" id="body-integrity">
+    <table>
+      <thead><tr><th>File</th><th>SHA-256</th><th>Size</th></tr></thead>
+      <tbody>
+        {{range .EvidenceHashes}}
+        <tr>
+          <td>{{.File}}</td>
+          <td style="font-size:.76em;word-break:break-all">{{.SHA256}}</td>
+          <td>{{.Size}} B</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
 {{end}}
 
 <!-- Footer -->
 <div class="footer">
-  <p>Generated by system-coroner {{.Version}} | {{.GeneratedAt.Format "2006-01-02 15:04:05 UTC"}} | {{.OS}}</p>
-  <p>Collection: {{.CollectionDuration}} | Analysis: {{.AnalysisDuration}}</p>
+  <p>system-coroner {{.Version}} · {{.GeneratedAt.Format "2006-01-02 15:04:05 UTC"}} · {{.OS}}</p>
+  <p style="margin-top:3px">Collection: {{.CollectionDuration}} · Analysis: {{.AnalysisDuration}}</p>
 </div>
 
-</div>
+</main><!-- /main-content -->
+
+<!-- Right TOC -->
+<nav class="toc" id="toc">
+  <div class="toc-title">Navigation</div>
+  <a class="toc-link" data-target="s-banner">Status</a>
+  {{if .Findings}}
+  <a class="toc-link" data-target="s-findings">Findings ({{len .Findings}})</a>
+  {{range .Findings}}
+  <a class="toc-link sub" data-target="f-{{.Check}}">{{.Check}}</a>
+  {{end}}
+  {{end}}
+  {{if .Verdict}}<a class="toc-link" data-target="s-verdict">Verdict</a>{{end}}
+  {{if .Verdict}}{{if .Verdict.Timeline}}<a class="toc-link" data-target="s-timeline">Timeline</a>{{end}}{{end}}
+  {{if .SigmaMatches}}<a class="toc-link" data-target="s-sigma">Sigma ({{len .SigmaMatches}})</a>{{end}}
+  {{if .IoCs}}<a class="toc-link" data-target="s-iocs">IoCs</a>{{end}}
+  {{if .RawFindings}}<a class="toc-link" data-target="s-raw">Analysis Failures</a>{{end}}
+  {{if .Verdict}}{{if .Verdict.DataGaps}}<a class="toc-link" data-target="s-gaps">Data Gaps</a>{{end}}{{end}}
+  {{if .CollectionFailures}}<div class="toc-sep"></div><a class="toc-link" data-target="s-failures">Failures</a>{{end}}
+  {{if .EvidenceHashes}}<a class="toc-link" data-target="s-integrity">Integrity</a>{{end}}
+</nav>
+
+</div><!-- /page-layout -->
 
 <script>
-(function() {
-  // Theme toggle (UI-001)
-  var html = document.documentElement;
-  var btn = document.getElementById('theme-btn');
-  var saved = localStorage.getItem('coroner-theme');
-  if (saved === 'light') { html.setAttribute('data-theme', 'light'); if (btn) btn.textContent = '🌙 Dark'; }
-  window.toggleTheme = function() {
-    var isLight = html.getAttribute('data-theme') === 'light';
-    if (isLight) { html.removeAttribute('data-theme'); localStorage.setItem('coroner-theme', 'dark'); if (btn) btn.textContent = '☀ Light'; }
-    else { html.setAttribute('data-theme', 'light'); localStorage.setItem('coroner-theme', 'light'); if (btn) btn.textContent = '🌙 Dark'; }
-  };
+(function(){
 
-  // JSON syntax highlighter (UI-007)
-  window.highlightJson = function(text) {
-    var s = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return s.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(m) {
-      var c = /^"/.test(m) ? (/:$/.test(m) ? 'json-key' : 'json-str') : /true|false/.test(m) ? 'json-bool' : /null/.test(m) ? 'json-null' : 'json-num';
-      return '<span class="' + c + '">' + m + '</span>';
-    });
-  };
-  window.copyJsonViewer = function(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    navigator.clipboard.writeText(el.textContent).catch(function() {});
-  };
-  document.querySelectorAll('.json-viewer').forEach(function(el) {
-    if (el.textContent.trim()) el.innerHTML = highlightJson(el.textContent);
-  });
+/* ── Theme ── */
+var html = document.documentElement;
+var themeBtn = document.getElementById('theme-btn');
+if(localStorage.getItem('coroner-theme')==='light'){html.setAttribute('data-theme','light');if(themeBtn)themeBtn.textContent='🌙 Dark';}
+window.toggleTheme=function(){
+  var light=html.getAttribute('data-theme')==='light';
+  if(light){html.removeAttribute('data-theme');localStorage.setItem('coroner-theme','dark');if(themeBtn)themeBtn.textContent='☀ Light';}
+  else{html.setAttribute('data-theme','light');localStorage.setItem('coroner-theme','light');if(themeBtn)themeBtn.textContent='🌙 Dark';}
+};
 
-  window.downloadIoCs = function(format) {
-    var table = document.getElementById('ioc-table');
-    if (!table) return;
-    var headers = Array.from(table.querySelectorAll('thead th')).map(function(th) { return th.textContent.trim().toLowerCase(); });
-    var rows = Array.from(table.querySelectorAll('tbody tr')).map(function(tr) {
-      return Array.from(tr.querySelectorAll('td')).map(function(td) { return td.textContent.trim(); });
-    });
-    var content, mime, ext;
-    if (format === 'json') {
-      var data = rows.map(function(r) {
-        var obj = {};
-        headers.forEach(function(h, i) { obj[h] = r[i] || ''; });
-        return obj;
-      });
-      content = JSON.stringify(data, null, 2);
-      mime = 'application/json';
-      ext = 'json';
+/* ── Section toggle ── */
+window.toggleSec=function(key){
+  var body=document.getElementById('body-'+key);
+  var chev=document.getElementById('chev-'+key);
+  var hdr=body&&body.previousElementSibling;
+  if(!body)return;
+  var hidden=body.classList.toggle('hidden');
+  if(chev)chev.classList.toggle('closed',hidden);
+  if(hdr)hdr.classList.toggle('is-open',!hidden);
+};
+
+/* ── Finding toggle ── */
+window.toggleFinding=function(id){
+  var body=document.getElementById('fbody-'+id);
+  var chev=document.getElementById('chev-f-'+id);
+  if(!body)return;
+  var hidden=body.classList.toggle('hidden');
+  if(chev)chev.classList.toggle('closed',hidden);
+};
+
+/* ── TOC click handler ── */
+function ensureVisible(key){
+  var body=document.getElementById('body-'+key);
+  if(body&&body.classList.contains('hidden'))toggleSec(key);
+}
+document.querySelectorAll('.toc-link[data-target]').forEach(function(link){
+  link.addEventListener('click',function(e){
+    e.preventDefault();
+    var target=link.getAttribute('data-target');
+    var el=document.getElementById(target);
+    if(!el)return;
+    if(target.startsWith('f-')){
+      ensureVisible('findings');
     } else {
-      var lines = [headers.map(function(h) { return '"' + h + '"'; }).join(',')];
-      rows.forEach(function(r) {
-        lines.push(r.map(function(c) { return '"' + (c || '').replace(/"/g, '""') + '"'; }).join(','));
-      });
-      content = lines.join('\n');
-      mime = 'text/csv';
-      ext = 'csv';
+      ensureVisible(target.replace('s-',''));
     }
-    var blob = new Blob([content], {type: mime});
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'iocs.' + ext;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-  };
+    setTimeout(function(){el.scrollIntoView({behavior:'smooth',block:'start'});},30);
+  });
+});
+
+/* ── TOC active tracking (IntersectionObserver) ── */
+var tocLinks=document.querySelectorAll('.toc-link[data-target]');
+function setActive(id){
+  tocLinks.forEach(function(l){l.classList.toggle('active',l.getAttribute('data-target')===id);});
+}
+if('IntersectionObserver' in window){
+  var obs=new IntersectionObserver(function(entries){
+    var hit=null;
+    entries.forEach(function(e){if(e.isIntersecting)hit=e.target.id;});
+    if(hit)setActive(hit);
+  },{rootMargin:'-56px 0px -65% 0px',threshold:0});
+  document.querySelectorAll('[id]').forEach(function(el){
+    if(el.id.startsWith('s-')||el.id.startsWith('f-'))obs.observe(el);
+  });
+}
+
+/* ── Copy section text ── */
+window.copySection=function(key,btn){
+  var body=document.getElementById('body-'+key);
+  if(!body)return;
+  var wasHidden=body.classList.contains('hidden');
+  if(wasHidden)body.classList.remove('hidden');
+  var text=body.innerText;
+  if(wasHidden)body.classList.add('hidden');
+  navigator.clipboard.writeText(text).then(function(){
+    if(btn){var orig=btn.textContent;btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent=orig;btn.classList.remove('ok');},1500);}
+  }).catch(function(){});
+};
+
+/* ── Copy full report ── */
+window.copyAllReport=function(){
+  var btn=document.getElementById('btn-copy-all');
+  var parts=[];
+  ['s-banner','s-summary','body-verdict','body-timeline','body-findings',
+   'body-sigma','body-iocs','body-gaps','body-failures','body-integrity'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){
+      var wasHidden=el.classList.contains('hidden');
+      if(wasHidden)el.classList.remove('hidden');
+      parts.push(el.innerText.trim());
+      if(wasHidden)el.classList.add('hidden');
+    }
+  });
+  navigator.clipboard.writeText(parts.filter(Boolean).join('\n\n---\n\n')).then(function(){
+    if(btn){btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent='Copy Report';btn.classList.remove('ok');},1800);}
+  }).catch(function(){});
+};
+
+/* ── JSON highlighting ── */
+window.highlightJson=function(t){
+  var s=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return s.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,function(m){
+    var c=/^"/.test(m)?(/:$/.test(m)?'json-key':'json-str'):/true|false/.test(m)?'json-bool':/null/.test(m)?'json-null':'json-num';
+    return '<span class="'+c+'">'+m+'</span>';
+  });
+};
+window.copyJsonViewer=function(id,btn){
+  var el=document.getElementById(id);
+  if(!el)return;
+  navigator.clipboard.writeText(el.textContent).then(function(){
+    if(btn){var orig=btn.textContent;btn.textContent='Copied!';btn.classList.add('ok');setTimeout(function(){btn.textContent=orig;btn.classList.remove('ok');},1500);}
+  }).catch(function(){});
+};
+document.querySelectorAll('.json-viewer').forEach(function(el){
+  if(el.textContent.trim())el.innerHTML=highlightJson(el.textContent);
+});
+
+/* ── IoC export ── */
+window.downloadIoCs=function(format){
+  var table=document.getElementById('ioc-table');
+  if(!table)return;
+  var headers=Array.from(table.querySelectorAll('thead th')).map(function(th){return th.textContent.trim().toLowerCase();});
+  var rows=Array.from(table.querySelectorAll('tbody tr')).map(function(tr){
+    return Array.from(tr.querySelectorAll('td')).map(function(td){return td.textContent.trim();});
+  });
+  var content,mime,ext;
+  if(format==='json'){
+    var data=rows.map(function(r){var o={};headers.forEach(function(h,i){o[h]=r[i]||'';});return o;});
+    content=JSON.stringify(data,null,2);mime='application/json';ext='json';
+  } else {
+    var lines=[headers.map(function(h){return'"'+h+'"';}).join(',')];
+    rows.forEach(function(r){lines.push(r.map(function(c){return'"'+(c||'').replace(/"/g,'""')+'"';}).join(','));});
+    content=lines.join('\n');mime='text/csv';ext='csv';
+  }
+  var blob=new Blob([content],{type:mime});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='iocs.'+ext;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
+};
+
 })();
 </script>
 </body>

@@ -6,14 +6,21 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"sync/atomic"
+	"time"
 )
+
+// ProgressFunc is called when each per-check LLM analysis completes.
+// done is the number of checks completed so far; total is the total count.
+type ProgressFunc func(checkID string, done, total int, elapsed time.Duration, err error)
 
 // Analyzer orchestrates the two-phase LLM analysis pipeline.
 type Analyzer struct {
-	provider Provider
-	hostname string
-	osName   string
-	verbose  bool
+	provider   Provider
+	hostname   string
+	osName     string
+	verbose    bool
+	onProgress ProgressFunc
 }
 
 // New creates an Analyzer with the given LLM provider.
@@ -24,6 +31,11 @@ func New(provider Provider, hostname, osName string, verbose bool) *Analyzer {
 		osName:   osName,
 		verbose:  verbose,
 	}
+}
+
+// SetProgress sets a callback invoked after each per-check analysis completes.
+func (a *Analyzer) SetProgress(fn ProgressFunc) {
+	a.onProgress = fn
 }
 
 // AnalyzeAll runs Phase 1 (per-check) and Phase 2 (synthesis) analysis.
@@ -43,7 +55,20 @@ func (a *Analyzer) AnalyzeAll(ctx context.Context, checkData map[string]string) 
 	}
 
 	// Phase 2: Cross-analysis synthesis
+	if a.onProgress != nil {
+		fmt.Fprintf(os.Stderr, "  [synthesis]                    running...\r")
+	}
+	synthStart := time.Now()
 	verdict, err := a.synthesize(ctx, findings)
+	synthElapsed := time.Since(synthStart)
+
+	if a.onProgress != nil {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "  [synthesis]                    ✗  %s\n", synthElapsed.Round(time.Millisecond))
+		} else {
+			fmt.Fprintf(os.Stderr, "  [synthesis]                    ✓  %s\n", synthElapsed.Round(time.Millisecond))
+		}
+	}
 	if err != nil {
 		if a.verbose {
 			fmt.Fprintf(os.Stderr, "[analyzer] synthesis failed: %v\n", err)
@@ -99,13 +124,22 @@ func (a *Analyzer) analyzeChecks(ctx context.Context, checkData map[string]strin
 	results := make([]result, 0, len(checkData))
 	var mu sync.Mutex
 	var wg sync.WaitGroup
+	total := len(checkData)
+	var doneCount atomic.Int32
 
 	for checkID, data := range checkData {
 		wg.Add(1)
 		go func(id, d string) {
 			defer wg.Done()
 
+			start := time.Now()
 			finding, err := a.AnalyzeCheck(ctx, id, d)
+			elapsed := time.Since(start)
+
+			done := int(doneCount.Add(1))
+			if a.onProgress != nil {
+				a.onProgress(id, done, total, elapsed, err)
+			}
 
 			mu.Lock()
 			defer mu.Unlock()

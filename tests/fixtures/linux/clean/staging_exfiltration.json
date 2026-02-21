@@ -1,0 +1,9 @@
+{
+  "collected_at": "2026-02-22T09:00:00Z",
+  "hostname": "webserver01",
+  "check": "staging_exfiltration",
+  "temp_archives": [],
+  "exfil_commands": [],
+  "usb_events": [],
+  "errors": []
+}

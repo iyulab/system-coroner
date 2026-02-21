@@ -86,5 +86,23 @@ func LinuxChecks() []Check {
 			OutputFormat:  "json",
 			RequiresAdmin: false,
 		},
+		{
+			ID:            "discovery_recon",
+			Name:          "Internal Reconnaissance",
+			Description:   "Detect attacker recon commands from bash history: id, whoami, nmap, find SUID, BloodHound",
+			Script:        "linux/discovery_recon.sh",
+			Timeout:       30 * time.Second,
+			OutputFormat:  "json",
+			RequiresAdmin: false,
+		},
+		{
+			ID:            "staging_exfiltration",
+			Name:          "Data Staging & Exfiltration",
+			Description:   "Detect staging archives in /tmp//dev/shm, exfil commands (rclone/nc/scp), USB events",
+			Script:        "linux/staging_exfiltration.sh",
+			Timeout:       30 * time.Second,
+			OutputFormat:  "json",
+			RequiresAdmin: false,
+		},
 	}
 }

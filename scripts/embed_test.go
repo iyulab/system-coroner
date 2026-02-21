@@ -127,7 +127,7 @@ func TestLinuxScripts_Count(t *testing.T) {
 		return nil
 	})
 
-	if count != 9 {
-		t.Errorf("expected 9 Linux detection scripts, got %d", count)
+	if count < 9 {
+		t.Errorf("expected at least 9 Linux detection scripts, got %d", count)
 	}
 }

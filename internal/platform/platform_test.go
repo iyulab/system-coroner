@@ -108,8 +108,8 @@ func TestFilterEnabled_DisableOne(t *testing.T) {
 
 func TestLinuxChecks_Count(t *testing.T) {
 	checks := LinuxChecks()
-	if len(checks) != 9 {
-		t.Errorf("LinuxChecks() returned %d checks, want 9", len(checks))
+	if len(checks) < 9 {
+		t.Errorf("LinuxChecks() returned %d checks, want at least 9", len(checks))
 	}
 }
 

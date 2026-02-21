@@ -1,0 +1,14 @@
+{
+  "collected_at": "2026-02-21T09:00:00Z",
+  "hostname": "web-prod-01",
+  "check": "lateral_movement",
+  "ssh_sessions": [
+    {"user":"admin","tty":"pts/0","source":"10.0.1.100"}
+  ],
+  "recent_ssh_logins": [
+    {"user":"admin","source_ip":"10.0.1.100","raw":"Feb 21 08:30:00 web-prod-01 sshd[1234]: Accepted publickey for admin from 10.0.1.100"}
+  ],
+  "ssh_tunnels": [],
+  "remote_tools": [],
+  "errors": []
+}

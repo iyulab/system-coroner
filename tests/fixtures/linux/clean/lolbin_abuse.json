@@ -1,0 +1,11 @@
+{
+  "collected_at": "2026-02-21T09:00:00Z",
+  "hostname": "web-prod-01",
+  "check": "lolbin_abuse",
+  "suspicious_processes": [],
+  "suid_binaries": [],
+  "capability_binaries": [
+    {"path":"/usr/bin/ping","capabilities":" cap_net_raw=ep"}
+  ],
+  "errors": []
+}

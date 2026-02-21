@@ -1,0 +1,22 @@
+title: Base64 Encoded Command in Run Key or Startup Location
+id: sc-pers-001
+status: experimental
+description: Detects base64 encoded PowerShell commands or suspicious executables
+  in persistence locations (Run keys, scheduled tasks), indicating persistence via
+  obfuscated payloads.
+logsource:
+  product: system-coroner
+  category: persistence
+detection:
+  enc_cmd:
+    pattern|contains: 'EncodedCommand'
+  temp_path:
+    value|contains: 'Temp'
+  condition: enc_cmd or temp_path
+level: high
+tags:
+  - attack.persistence
+  - attack.t1547
+  - attack.t1059.001
+references:
+  - https://attack.mitre.org/techniques/T1547/

@@ -1,0 +1,14 @@
+{
+  "cleared_logs": [
+    {"event_id": 1102, "time": "2024-01-14T04:00:00Z", "log": "Security", "cleared_by": "SYSTEM"}
+  ],
+  "audit_policy_changes": [
+    {"event_id": 4719, "time": "2024-01-14T03:55:00Z", "category": "Logon/Logoff", "change": "Success removed"}
+  ],
+  "log_sizes": [
+    {"log": "Security", "size_mb": 0.1, "max_size_mb": 20, "note": "abnormally small"},
+    {"log": "System", "size_mb": 15.2, "max_size_mb": 20, "note": "normal"},
+    {"log": "Application", "size_mb": 8.5, "max_size_mb": 20, "note": "normal"}
+  ],
+  "eventlog_service": {"status": "Running", "start_type": "Automatic"}
+}

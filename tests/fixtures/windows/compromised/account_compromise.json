@@ -1,0 +1,16 @@
+{
+  "new_accounts": [
+    {"event_id": 4720, "time": "2024-01-14T02:30:00Z", "account": "support$", "created_by": "SYSTEM"}
+  ],
+  "admin_group_changes": [
+    {"event_id": 4732, "time": "2024-01-14T02:31:00Z", "account": "support$", "group": "Administrators"}
+  ],
+  "logon_failures": [
+    {"event_id": 4625, "time": "2024-01-14T01:00:00Z", "account": "Administrator", "source": "10.0.0.50", "count": 47}
+  ],
+  "explicit_credentials": [
+    {"event_id": 4648, "time": "2024-01-14T02:28:00Z", "account": "admin", "target": "DC01"}
+  ],
+  "hidden_accounts": ["support$"],
+  "admin_members": ["Administrator", "admin", "support$"]
+}

@@ -1,0 +1,22 @@
+{
+  "registry_run_keys": [
+    {
+      "path": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "name": "SecurityHealth",
+      "value": "C:\\Program Files\\Windows Defender\\MSASCuiL.exe",
+      "type": "REG_SZ"
+    }
+  ],
+  "scheduled_tasks": [
+    {
+      "task_name": "\\Microsoft\\Windows\\WindowsUpdate\\Scheduled Start",
+      "status": "Ready",
+      "next_run": "2024-01-15T03:00:00",
+      "action": "C:\\Windows\\System32\\sc.exe start wuauserv",
+      "author": "Microsoft"
+    }
+  ],
+  "services": [],
+  "winlogon": [],
+  "ifeo": []
+}

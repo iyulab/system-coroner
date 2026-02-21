@@ -1,0 +1,22 @@
+{
+  "collected_at": "2026-02-21T09:00:00Z",
+  "hostname": "web-prod-01",
+  "check": "account_compromise",
+  "uid0_accounts": [
+    {"username":"root","shell":"/bin/bash"}
+  ],
+  "login_shells": [
+    {"username":"root","shell":"/bin/bash"},
+    {"username":"admin","shell":"/bin/bash"}
+  ],
+  "sudo_wheel_members": ["admin"],
+  "passwd_recent_mods": {"modified":"2026-01-15T10:00:00Z","days_ago":"37"},
+  "failed_logins": 3,
+  "ssh_authorized_keys": [
+    {"user":"admin","file":"/home/admin/.ssh/authorized_keys","key_count":1,"mtime":"2025-12-01T10:00:00Z","age_hours":1872,"recently_modified":false}
+  ],
+  "sudoers_d": [
+    {"file":"10-admin","has_nopasswd":false,"snippet":"admin ALL=(ALL:ALL) ALL"}
+  ],
+  "errors": []
+}

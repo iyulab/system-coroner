@@ -1,0 +1,10 @@
+{
+  "new_accounts": [],
+  "admin_group_changes": [],
+  "logon_failures": [
+    {"event_id": 4625, "time": "2024-01-14T10:15:00Z", "account": "admin", "source": "10.0.0.5", "count": 2}
+  ],
+  "explicit_credentials": [],
+  "hidden_accounts": [],
+  "admin_members": ["Administrator"]
+}

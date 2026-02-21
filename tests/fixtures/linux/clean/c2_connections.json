@@ -1,0 +1,11 @@
+{
+  "collected_at": "2026-02-21T09:00:00Z",
+  "hostname": "web-prod-01",
+  "check": "c2_connections",
+  "external_connections": [
+    {"local_address":"10.0.1.5","local_port":443,"remote_address":"142.250.80.46","remote_port":443,"protocol":"tcp","process":"curl:1234"}
+  ],
+  "suspicious_listeners": [],
+  "dns_cache": [],
+  "errors": []
+}

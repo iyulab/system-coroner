@@ -1,0 +1,31 @@
+{
+  "external_connections": [
+    {
+      "local_address": "10.0.0.5",
+      "local_port": 443,
+      "remote_address": "13.107.42.14",
+      "remote_port": 443,
+      "state": "Established",
+      "process_name": "svchost.exe",
+      "process_id": 1024,
+      "process_path": "C:\\Windows\\System32\\svchost.exe",
+      "signature_status": "Valid"
+    },
+    {
+      "local_address": "10.0.0.5",
+      "local_port": 50123,
+      "remote_address": "204.79.197.200",
+      "remote_port": 443,
+      "state": "Established",
+      "process_name": "MsMpEng.exe",
+      "process_id": 2048,
+      "process_path": "C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\4.18.2301.6-0\\MsMpEng.exe",
+      "signature_status": "Valid"
+    }
+  ],
+  "dns_cache": [
+    {"name": "login.microsoftonline.com", "type": "A", "data": "20.190.160.14"},
+    {"name": "www.microsoft.com", "type": "A", "data": "13.107.42.14"}
+  ],
+  "suspicious_listeners": []
+}

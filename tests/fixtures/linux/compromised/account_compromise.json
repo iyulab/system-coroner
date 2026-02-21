@@ -1,0 +1,28 @@
+{
+  "collected_at": "2026-02-21T03:15:00Z",
+  "hostname": "web-prod-01",
+  "check": "account_compromise",
+  "uid0_accounts": [
+    {"username":"root","shell":"/bin/bash"},
+    {"username":"sysadm","shell":"/bin/bash"}
+  ],
+  "login_shells": [
+    {"username":"root","shell":"/bin/bash"},
+    {"username":"admin","shell":"/bin/bash"},
+    {"username":"sysadm","shell":"/bin/bash"},
+    {"username":"mysql","shell":"/bin/bash"}
+  ],
+  "sudo_wheel_members": ["admin","sysadm"],
+  "passwd_recent_mods": {"modified":"2026-02-20T22:30:00Z","days_ago":"0"},
+  "failed_logins": 847,
+  "ssh_authorized_keys": [
+    {"user":"admin","file":"/home/admin/.ssh/authorized_keys","key_count":1,"mtime":"2026-02-21T01:10:00Z","age_hours":2,"recently_modified":true},
+    {"user":"root","file":"/root/.ssh/authorized_keys","key_count":3,"mtime":"2026-02-21T00:45:00Z","age_hours":2,"recently_modified":true},
+    {"user":"www-data","file":"/var/www/.ssh/authorized_keys","key_count":1,"mtime":"2025-11-10T08:00:00Z","age_hours":2400,"recently_modified":false}
+  ],
+  "sudoers_d": [
+    {"file":"10-admin","has_nopasswd":false,"snippet":"admin ALL=(ALL:ALL) ALL"},
+    {"file":"99-backdoor","has_nopasswd":true,"snippet":"www-data ALL=(ALL) NOPASSWD: ALL"}
+  ],
+  "errors": []
+}

@@ -1,0 +1,28 @@
+{
+  "suspicious_files": [
+    {
+      "path": "C:\\inetpub\\wwwroot\\upload\\cmd.aspx",
+      "size": 2048,
+      "created": "2024-01-14T01:30:00Z",
+      "modified": "2024-01-14T01:30:00Z",
+      "hash": "deadbeef12345678"
+    }
+  ],
+  "suspicious_patterns": [
+    {
+      "file": "C:\\inetpub\\wwwroot\\upload\\cmd.aspx",
+      "pattern": "Process.Start",
+      "line": "[REDACTED:aspx_process_start_pattern]"
+    }
+  ],
+  "iis_anomalies": [
+    {
+      "time": "2024-01-14T01:35:00Z",
+      "uri": "/upload/cmd.aspx",
+      "method": "POST",
+      "status": 200,
+      "client_ip": "185.220.101.42",
+      "query": "cmd=whoami"
+    }
+  ]
+}

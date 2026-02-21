@@ -1,0 +1,43 @@
+# system-coroner 설정 파일
+# 이 파일을 config.toml로 복사하여 사용하세요.
+
+[llm]
+# 지원 프로바이더: anthropic, openai, ollama
+provider = "anthropic"
+
+# API 키 (환경변수 CORONER_API_KEY로도 설정 가능)
+api_key  = "sk-ant-..."
+
+# 사용할 모델
+model    = "claude-sonnet-4-5-20250514"
+
+# 커스텀 엔드포인트 (Ollama, GPUStack 등)
+# endpoint = "http://localhost:11434"
+
+# --- Ollama 예시 ---
+# provider = "ollama"
+# model    = "foundation-sec:8b"
+# endpoint = "http://localhost:11434"
+
+# --- GPUStack 예시 (OpenAI-compatible API) ---
+# provider = "openai"
+# api_key  = "gpustack-api-key"
+# model    = "foundation-sec-8b-reasoning"
+# endpoint = "http://gpustack-server:80/v1"
+
+[output]
+dir          = "output"
+open_browser = true
+keep_raw     = true    # IoC 원본 파일 보존 (포렌식 목적으로 항상 true 권장)
+
+[checks]
+# 침입 흔적 탐지 항목 — 기본 전체 활성화, false로 비활성화 가능
+c2_connections     = true   # C2 통신 및 역방향 쉘 탐지
+account_compromise = true   # 계정 탈취 및 생성 흔적
+persistence        = true   # 재부팅 후 생존 메커니즘
+lolbin_abuse       = true   # 합법적 도구를 이용한 공격
+fileless_attack    = true   # 파일리스 공격 (WMI, 메모리)
+log_tampering      = true   # 로그 삭제/변조 흔적
+credential_dump    = true   # 크리덴셜 덤프 흔적
+lateral_movement   = true   # 내부 이동 흔적
+webshell           = true   # 웹쉘 탐지 (웹서버 존재 시)

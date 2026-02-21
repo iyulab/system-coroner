@@ -1,0 +1,30 @@
+# Auto detect text files and normalize line endings
+* text=auto
+
+# Go source files
+*.go text eol=lf
+
+# Shell scripts (must be LF for Linux execution)
+*.sh text eol=lf
+
+# PowerShell scripts (CRLF for Windows)
+*.ps1 text eol=crlf
+
+# Configuration files
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+
+# Documentation
+*.md text eol=lf
+
+# Templates
+*.tmpl text eol=lf
+
+# Makefile
+Makefile text eol=lf
+
+# Binary files
+*.exe binary
+*.zip binary

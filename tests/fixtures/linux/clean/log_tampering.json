@@ -1,0 +1,14 @@
+{
+  "collected_at": "2026-02-21T09:00:00Z",
+  "hostname": "web-prod-01",
+  "check": "log_tampering",
+  "log_sizes": [
+    {"file":"/var/log/syslog","size_bytes":5242880,"size_mb":"5.0","modified":"2026-02-21T08:55:00Z","note":"normal"},
+    {"file":"/var/log/auth.log","size_bytes":1048576,"size_mb":"1.0","modified":"2026-02-21T08:50:00Z","note":"normal"}
+  ],
+  "missing_logs": [],
+  "last_events": ["admin   pts/0   10.0.1.100  Fri Feb 21 08:30   still logged in"],
+  "auditd_status": {"active":"active","enabled":"enabled"},
+  "journal_integrity": "pass",
+  "errors": []
+}

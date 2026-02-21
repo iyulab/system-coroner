@@ -1,0 +1,10 @@
+{
+  "cleared_logs": [],
+  "audit_policy_changes": [],
+  "log_sizes": [
+    {"log": "Security", "size_mb": 14.8, "max_size_mb": 20, "note": "normal"},
+    {"log": "System", "size_mb": 12.3, "max_size_mb": 20, "note": "normal"},
+    {"log": "Application", "size_mb": 9.1, "max_size_mb": 20, "note": "normal"}
+  ],
+  "eventlog_service": {"status": "Running", "start_type": "Automatic"}
+}

@@ -1,0 +1,17 @@
+{
+  "collected_at": "2026-02-21T03:15:00Z",
+  "hostname": "web-prod-01",
+  "check": "fileless_attack",
+  "deleted_exe_processes": [
+    {"pid":31245,"exe":"/tmp/dropper (deleted)","cmdline":"./dropper -c 91.215.85.17","user":"www-data"},
+    {"pid":31302,"exe":"/dev/shm/.x (deleted)","cmdline":"bash -i","user":"root"}
+  ],
+  "shm_files": [
+    {"path":"/dev/shm/.x","size":48576,"owner":"root","permissions":"755"},
+    {"path":"/dev/shm/.cache_update","size":12288,"owner":"www-data","permissions":"700"}
+  ],
+  "memfd_processes": [
+    {"pid":31350,"cmdline":"[kworker/0:1]","user":"root"}
+  ],
+  "errors": []
+}

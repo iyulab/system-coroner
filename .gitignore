@@ -1,0 +1,35 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local
+CLAUDE.md
+claudedocs/
+dev-docs/
+.serena/
+.env
+.env.local
+
+# Go
+/build/
+/coroner
+/coroner.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Output
+/output/
+
+# Config with secrets
+config.toml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage.out

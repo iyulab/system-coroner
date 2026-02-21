@@ -1,0 +1,17 @@
+{
+  "collected_at": "2026-02-21T03:15:00Z",
+  "hostname": "web-prod-01",
+  "check": "c2_connections",
+  "external_connections": [
+    {"local_address":"10.0.1.5","local_port":48231,"remote_address":"185.220.101.42","remote_port":443,"protocol":"tcp","process":"curl:31245"},
+    {"local_address":"10.0.1.5","local_port":52100,"remote_address":"91.215.85.17","remote_port":4444,"protocol":"tcp","process":"bash:31302"}
+  ],
+  "suspicious_listeners": [
+    {"port":4444,"process":"nc:31298"},
+    {"port":8888,"process":"python3:31315"}
+  ],
+  "dns_cache": [
+    {"source":"resolvectl","data":"Current Cache Size: 142\nCache Hits: 89\nCache Misses: 53"}
+  ],
+  "errors": []
+}

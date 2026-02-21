@@ -1,0 +1,20 @@
+title: External Connection from Process in Temp Directory
+id: sc-c2-001
+status: experimental
+description: Detects network connections from processes running in temporary directories,
+  which is a common indicator of malware dropped to disk and communicating outbound.
+logsource:
+  product: system-coroner
+  category: c2_connections
+detection:
+  selection:
+    process_path|contains: 'Temp'
+  filter_signed:
+    signature_status: 'Valid'
+  condition: selection and not filter_signed
+level: high
+tags:
+  - attack.command_and_control
+  - attack.t1071
+references:
+  - https://attack.mitre.org/techniques/T1071/

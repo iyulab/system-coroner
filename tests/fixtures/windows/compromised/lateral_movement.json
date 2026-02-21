@@ -1,0 +1,30 @@
+{
+  "remote_logons": [
+    {
+      "event_id": 4624,
+      "time": "2024-01-14T02:45:00Z",
+      "logon_type": 3,
+      "account": "admin",
+      "source_ip": "10.0.0.50",
+      "source_host": "WS-01"
+    },
+    {
+      "event_id": 4624,
+      "time": "2024-01-14T03:00:00Z",
+      "logon_type": 10,
+      "account": "admin",
+      "source_ip": "10.0.0.50",
+      "source_host": "WS-01"
+    }
+  ],
+  "psexec_artifacts": [
+    {"service": "PSEXESVC", "path": "C:\\Windows\\PSEXESVC.exe", "created": "2024-01-14T02:44:00Z"}
+  ],
+  "smb_shares": [
+    {"name": "ADMIN$", "path": "C:\\Windows", "connections": 3},
+    {"name": "C$", "path": "C:\\", "connections": 1}
+  ],
+  "winrm_sessions": [
+    {"user": "admin", "source": "10.0.0.50", "time": "2024-01-14T03:10:00Z"}
+  ]
+}

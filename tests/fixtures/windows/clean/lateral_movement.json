@@ -1,0 +1,18 @@
+{
+  "remote_logons": [
+    {
+      "event_id": 4624,
+      "time": "2024-01-14T08:30:00Z",
+      "logon_type": 2,
+      "account": "admin",
+      "source_ip": "127.0.0.1",
+      "source_host": "WEB-01"
+    }
+  ],
+  "psexec_artifacts": [],
+  "smb_shares": [
+    {"name": "ADMIN$", "path": "C:\\Windows", "connections": 0},
+    {"name": "C$", "path": "C:\\", "connections": 0}
+  ],
+  "winrm_sessions": []
+}

@@ -1,0 +1,35 @@
+{
+  "registry_run_keys": [
+    {
+      "path": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "name": "WindowsUpdate",
+      "value": "C:\\Windows\\Temp\\svchost.exe -connect",
+      "type": "REG_SZ"
+    },
+    {
+      "path": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "name": "UpdateHelper",
+      "value": "powershell.exe -EncodedCommand JABjAD0ATgBlAHcALQBPAGIAagBlAGMAdAAgAFMAeQBzAHQAZQBtAC4ATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAA7AA==",
+      "type": "REG_SZ"
+    }
+  ],
+  "scheduled_tasks": [
+    {
+      "task_name": "\\Microsoft\\Windows\\Maintenance\\WinUpdate",
+      "status": "Ready",
+      "next_run": "2024-01-15T03:00:00",
+      "action": "C:\\Windows\\Temp\\update.bat",
+      "author": "SYSTEM"
+    }
+  ],
+  "services": [],
+  "winlogon": [],
+  "ifeo": [],
+  "base64_detections": [
+    {
+      "source": "registry:HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\UpdateHelper",
+      "pattern": "-EncodedCommand",
+      "value": "powershell.exe -EncodedCommand JABjAD0ATgBlAHcALQBPAGIAagBlAGMAdAAgAFMAeQBzAHQAZQBtAC4ATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAA7AA=="
+    }
+  ]
+}

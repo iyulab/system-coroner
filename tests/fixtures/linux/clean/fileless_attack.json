@@ -1,0 +1,9 @@
+{
+  "collected_at": "2026-02-21T09:00:00Z",
+  "hostname": "web-prod-01",
+  "check": "fileless_attack",
+  "deleted_exe_processes": [],
+  "shm_files": [],
+  "memfd_processes": [],
+  "errors": []
+}

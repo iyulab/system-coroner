@@ -1,0 +1,49 @@
+# system-coroner 설정 파일
+# 사용법: 이 파일을 config.toml로 복사한 후 수정
+#   cp config.example.toml config.toml
+
+# LLM 프로바이더 설정
+[llm]
+# provider: "anthropic" | "openai" | "ollama"
+provider = "ollama"
+
+# API 키 (anthropic/openai 필수, ollama는 불필요)
+# 환경변수 CORONER_API_KEY로도 설정 가능
+# api_key = "sk-..."
+
+# 모델 이름
+model = "llama3.1:8b"
+
+# 엔드포인트 (선택사항)
+# ollama 기본값: http://localhost:11434
+# openai 기본값: https://api.openai.com/v1
+# endpoint = "http://localhost:11434"
+
+# HTTP 타임아웃 (초, 선택사항)
+# 0 = 프로바이더 기본값 사용 (anthropic/openai: 120초, ollama: 300초)
+# timeout = 0
+
+# 출력 설정
+[output]
+# 결과 저장 디렉토리 (기본값: output)
+dir = "output"
+
+# 리포트 생성 후 브라우저 자동 열기
+open_browser = false
+
+# LLM 원본 응답 보존 여부
+keep_raw = true
+
+# 탐지 항목 개별 활성화/비활성화
+# 기본값: 모든 항목 활성화
+# false로 설정하면 해당 항목 비활성화
+[checks]
+# c2_connections = true
+# persistence = true
+# log_tampering = true
+# account_compromise = true
+# credential_dump = true
+# fileless_attack = true
+# lolbin_abuse = true
+# lateral_movement = true
+# webshell = true

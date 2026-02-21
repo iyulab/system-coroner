@@ -1,0 +1,21 @@
+{
+  "external_connections": [
+    {
+      "local_address": "10.0.0.5",
+      "local_port": 49152,
+      "remote_address": "185.220.101.42",
+      "remote_port": 443,
+      "state": "Established",
+      "process_name": "svchost.exe",
+      "process_id": 4312,
+      "process_path": "C:\\Windows\\Temp\\svchost.exe",
+      "signature_status": "NotSigned"
+    }
+  ],
+  "dns_cache": [
+    {"name": "update-service.xyz", "type": "A", "data": "185.220.101.42"}
+  ],
+  "suspicious_listeners": [
+    {"address": "0.0.0.0", "port": 4444, "process_name": "cmd.exe", "process_id": 8812}
+  ]
+}

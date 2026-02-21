@@ -1,0 +1,21 @@
+{
+  "collected_at": "2026-02-21T03:15:00Z",
+  "hostname": "web-prod-01",
+  "check": "log_tampering",
+  "log_sizes": [
+    {"file":"/var/log/syslog","size_bytes":5242880,"size_mb":"5.0","modified":"2026-02-21T03:10:00Z","note":"normal"},
+    {"file":"/var/log/auth.log","size_bytes":512,"size_mb":"0.0","modified":"2026-02-21T02:00:00Z","note":"suspiciously small"}
+  ],
+  "missing_logs": [
+    {"file":"/var/log/secure","status":"missing"}
+  ],
+  "last_events": [
+    "root     pts/1   10.0.1.100   Thu Feb 20 22:15 - 23:45  (01:30)",
+    "admin    pts/0   10.0.1.200   Thu Feb 20 08:00   still logged in",
+    "reboot   system boot  5.4.0-150-gen  Thu Feb 20 02:00   still running",
+    "shutdown system down  5.4.0-150-gen  Thu Feb 20 01:58 - 02:00  (00:02)"
+  ],
+  "auditd_status": {"active":"inactive","enabled":"disabled"},
+  "journal_integrity": "fail",
+  "errors": []
+}

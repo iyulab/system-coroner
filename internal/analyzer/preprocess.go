@@ -44,12 +44,42 @@ var knownGoodCIDRs = []string{
 // parsedKnownGoodNets is the parsed form of knownGoodCIDRs, initialized on first use.
 var parsedKnownGoodNets []*net.IPNet
 
+// extraKnownGoodIPs holds additional IPs added at runtime (e.g. the host's own external IP).
+var extraKnownGoodIPs []*net.IPNet
+
 func init() {
 	for _, cidr := range knownGoodCIDRs {
 		_, n, err := net.ParseCIDR(cidr)
 		if err == nil {
 			parsedKnownGoodNets = append(parsedKnownGoodNets, n)
 		}
+	}
+}
+
+// AddKnownGoodIP registers an additional IP address or CIDR as known-good.
+// This is used to exclude the host's own external IP from C2 detection.
+// Accepts both bare IPs (treated as /32) and CIDR notation.
+func AddKnownGoodIP(ipOrCIDR string) {
+	ipOrCIDR = strings.TrimSpace(ipOrCIDR)
+	if ipOrCIDR == "" {
+		return
+	}
+	// Try CIDR first
+	if strings.Contains(ipOrCIDR, "/") {
+		_, n, err := net.ParseCIDR(ipOrCIDR)
+		if err == nil {
+			extraKnownGoodIPs = append(extraKnownGoodIPs, n)
+		}
+		return
+	}
+	// Bare IP → /32
+	ip := net.ParseIP(ipOrCIDR)
+	if ip == nil {
+		return
+	}
+	_, n, _ := net.ParseCIDR(ipOrCIDR + "/32")
+	if n != nil {
+		extraKnownGoodIPs = append(extraKnownGoodIPs, n)
 	}
 }
 
@@ -86,6 +116,14 @@ func Preprocess(checkID, osName, data string) PreprocessResult {
 	// Apply event aggregation to collapse large repetitive arrays
 	if obj, ok := processed.(map[string]interface{}); ok {
 		processed = ctx.aggregateRepeatEvents(obj)
+	}
+
+	// FP-002: Annotate account_compromise data with success/failure analysis note.
+	// Brute-force failures alone (without 4624 success events) should not be CRITICAL.
+	if checkID == "account_compromise" {
+		if obj, ok := processed.(map[string]interface{}); ok {
+			processed = annotateBruteForceContext(obj)
+		}
 	}
 
 	result, err := json.Marshal(processed)
@@ -223,6 +261,11 @@ func isKnownGoodIP(ipStr string) bool {
 			return true
 		}
 	}
+	for _, n := range extraKnownGoodIPs {
+		if n.Contains(ip) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -340,6 +383,56 @@ func stringField(obj map[string]interface{}, key string) string {
 		}
 	}
 	return ""
+}
+
+// annotateBruteForceContext adds an analysis hint to account_compromise data.
+// If the data contains failed logon events but no corresponding 4624 success events,
+// it annotates the data so the LLM does not escalate failures-only to CRITICAL.
+// This addresses FP-002: brute-force with 0 successes should not be treated as
+// confirmed account compromise.
+func annotateBruteForceContext(obj map[string]interface{}) map[string]interface{} {
+	hasFailures := false
+	hasSuccesses := false
+	failureCount := 0
+
+	for _, v := range obj {
+		arr, ok := v.([]interface{})
+		if !ok {
+			continue
+		}
+		for _, item := range arr {
+			m, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			// Check event_id or type fields
+			evtID := fmt.Sprintf("%v", m["event_id"])
+			evtType := strings.ToLower(fmt.Sprintf("%v", m["type"]))
+			if evtID == "4625" || strings.Contains(evtType, "fail") {
+				hasFailures = true
+				failureCount++
+			}
+			if evtID == "4624" || strings.Contains(evtType, "success") {
+				hasSuccesses = true
+			}
+		}
+	}
+
+	if hasFailures && !hasSuccesses && failureCount > 0 {
+		result := make(map[string]interface{}, len(obj)+1)
+		for k, v := range obj {
+			result[k] = v
+		}
+		result["_analysis_hint"] = fmt.Sprintf(
+			"IMPORTANT: %d failed logon attempts detected but NO successful logons (4624) found. "+
+				"Authentication failures alone without successful access indicate a brute-force ATTEMPT, "+
+				"not confirmed compromise. Confidence should be at most 'medium' unless other "+
+				"corroborating evidence exists (lateral movement, persistence, etc.).",
+			failureCount,
+		)
+		return result
+	}
+	return obj
 }
 
 // truncateRaw applies a simple length limit to non-JSON string data.

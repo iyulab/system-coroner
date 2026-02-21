@@ -4,6 +4,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,6 +55,28 @@ func (o *Orchestrator) SetProvider(p analyzer.Provider) {
 	o.provider = p
 }
 
+// registerHostIPs collects all local network interface addresses and registers them
+// as known-good IPs in the analyzer preprocessor. This prevents the host's own
+// external IP from being flagged as a C2 connection (FP-001).
+func registerHostIPs() {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return
+	}
+	for _, addr := range addrs {
+		var ipStr string
+		switch v := addr.(type) {
+		case *net.IPNet:
+			ipStr = v.IP.String()
+		case *net.IPAddr:
+			ipStr = v.IP.String()
+		}
+		if ipStr != "" && ipStr != "0.0.0.0" && ipStr != "::" {
+			analyzer.AddKnownGoodIP(ipStr)
+		}
+	}
+}
+
 // Run executes the full pipeline.
 func (o *Orchestrator) Run(ctx context.Context) error {
 	if len(o.checks) == 0 {
@@ -63,6 +86,9 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 	hostname, _ := os.Hostname()
 	osName := platform.DetectOS()
 	startTime := time.Now()
+
+	// FP-001: Register host's own IPs as known-good to prevent self-IP false positives
+	registerHostIPs()
 
 	// Generate output directory
 	outputDir := collector.GenerateOutputDir(o.cfg.Output.Dir)

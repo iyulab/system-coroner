@@ -317,3 +317,62 @@ func TestTruncateRaw(t *testing.T) {
 		t.Errorf("truncated string should have marker: %q", result)
 	}
 }
+
+func TestAddKnownGoodIP_FiltersConnection(t *testing.T) {
+	// Register a test IP as known-good
+	AddKnownGoodIP("203.0.113.1") // TEST-NET-3 (RFC 5737)
+
+	data := `{"connections":[
+		{"remote_address":"203.0.113.1","remote_port":443,"process_name":"test.exe"},
+		{"remote_address":"185.220.101.42","remote_port":443,"process_name":"evil.exe"}
+	]}`
+	result := Preprocess("c2_connections", "windows", data)
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(result.Data), &parsed); err != nil {
+		t.Fatalf("result not valid JSON: %v", err)
+	}
+
+	conns, ok := parsed["connections"].([]interface{})
+	if !ok {
+		t.Fatal("connections field missing or wrong type")
+	}
+
+	// 203.0.113.1 should be filtered; 185.220.101.42 should remain
+	if len(conns) != 1 {
+		t.Errorf("expected 1 connection after filtering, got %d", len(conns))
+	}
+	if result.FilteredIPs != 1 {
+		t.Errorf("expected 1 filtered IP, got %d", result.FilteredIPs)
+	}
+}
+
+func TestAnnotateBruteForceContext_FailuresOnly(t *testing.T) {
+	// Simulate account_compromise data with failures but no successes
+	data := `{"logon_failures":[
+		{"event_id":"4625","source":"10.10.10.5","type":"failure"},
+		{"event_id":"4625","source":"10.10.10.5","type":"failure"},
+		{"event_id":"4625","source":"10.10.10.5","type":"failure"}
+	]}`
+	result := Preprocess("account_compromise", "windows", data)
+
+	if !strings.Contains(result.Data, "_analysis_hint") {
+		t.Error("expected _analysis_hint annotation for failures-only data")
+	}
+	if !strings.Contains(result.Data, "brute-force ATTEMPT") {
+		t.Error("expected brute-force ATTEMPT hint text")
+	}
+}
+
+func TestAnnotateBruteForceContext_WithSuccess(t *testing.T) {
+	// Failures + success → no extra annotation needed
+	data := `{"logon_events":[
+		{"event_id":"4625","type":"failure"},
+		{"event_id":"4624","type":"success"}
+	]}`
+	result := Preprocess("account_compromise", "windows", data)
+
+	if strings.Contains(result.Data, "_analysis_hint") {
+		t.Error("should NOT add hint when success events exist")
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -258,7 +259,7 @@ func TestRunFixtureWithMockLLM(t *testing.T) {
 	mock := &mockProvider{}
 	// The mock needs to handle both per-check and synthesis calls
 	// For simplicity, alternate between finding and verdict responses
-	callCount := 0
+	var callCount atomic.Int64
 	findingResp := newMockFinding(firstCheck.ID)
 	verdictResp := newMockVerdict()
 
@@ -306,11 +307,11 @@ func TestRunFixtureWithMockLLM(t *testing.T) {
 type adaptiveMockProvider struct {
 	findingResp string
 	verdictResp string
-	callCount   *int
+	callCount   *atomic.Int64
 }
 
 func (m *adaptiveMockProvider) Analyze(ctx context.Context, systemPrompt, userPrompt string) (string, error) {
-	*m.callCount++
+	m.callCount.Add(1)
 	// Synthesis prompt contains "FINAL SYNTHESIS" (case-insensitive check)
 	upper := strings.ToUpper(userPrompt)
 	if strings.Contains(upper, "SYNTHESIS") || strings.Contains(upper, "CROSS-ANALYSIS") {
@@ -379,7 +380,7 @@ func TestRunCleanFixtureWithMockLLM(t *testing.T) {
 		Version:     "test-0.1.0",
 	}
 
-	callCount := 0
+	var callCount atomic.Int64
 	adaptiveMock := &adaptiveMockProvider{
 		findingResp: newMockCleanFinding(firstCheck.ID),
 		verdictResp: newMockCleanVerdict(),
@@ -480,7 +481,7 @@ func TestRunCompromisedFixtureWithMockLLM(t *testing.T) {
 		Version:     "test-0.1.0",
 	}
 
-	callCount := 0
+	var callCount atomic.Int64
 	adaptiveMock := &adaptiveMockProvider{
 		findingResp: newMockCompromisedFinding("c2_connections"),
 		verdictResp: newMockCompromisedVerdict(),
@@ -522,8 +523,8 @@ func TestRunCompromisedFixtureWithMockLLM(t *testing.T) {
 	}
 
 	// Mock should have been called: 3 per-check + 1 synthesis = 4
-	if callCount < 3 {
-		t.Errorf("expected at least 3 LLM calls, got %d", callCount)
+	if callCount.Load() < 3 {
+		t.Errorf("expected at least 3 LLM calls, got %d", callCount.Load())
 	}
 }
 
@@ -550,7 +551,7 @@ func TestRunAllLinuxFixtures(t *testing.T) {
 		Version:     "test-0.1.0",
 	}
 
-	callCount := 0
+	var callCount atomic.Int64
 	adaptiveMock := &adaptiveMockProvider{
 		findingResp: newMockCompromisedFinding("generic"),
 		verdictResp: newMockCompromisedVerdict(),
@@ -566,8 +567,8 @@ func TestRunAllLinuxFixtures(t *testing.T) {
 	}
 
 	// Should have 9 per-check calls + 1 synthesis = 10 (may vary due to prompt detection)
-	if callCount < 9 {
-		t.Errorf("expected at least 9 LLM calls (9 checks + synthesis), got %d", callCount)
+	if callCount.Load() < 9 {
+		t.Errorf("expected at least 9 LLM calls (9 checks + synthesis), got %d", callCount.Load())
 	}
 }
 
@@ -595,7 +596,7 @@ func TestRunE2E_FullPipeline_WithZipExport(t *testing.T) {
 		Version:     "test-0.2.0",
 	}
 
-	callCount := 0
+	var callCount atomic.Int64
 	adaptiveMock := &adaptiveMockProvider{
 		findingResp: newMockCleanFinding("generic"),
 		verdictResp: newMockCleanVerdict(),
@@ -661,8 +662,8 @@ func TestRunE2E_FullPipeline_WithZipExport(t *testing.T) {
 	}
 
 	// Verify LLM was called: 9 checks + 1 synthesis = 10
-	if callCount < 9 {
-		t.Errorf("expected at least 9 LLM calls, got %d", callCount)
+	if callCount.Load() < 9 {
+		t.Errorf("expected at least 9 LLM calls, got %d", callCount.Load())
 	}
 }
 

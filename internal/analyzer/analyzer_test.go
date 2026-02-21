@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 )
 
@@ -183,10 +184,12 @@ func TestAnalyzeAll_Success(t *testing.T) {
 type indexedMockProvider struct {
 	responses []string
 	idx       int
-	mu        testing.T // just for sync, we use a simple counter
+	mu        sync.Mutex
 }
 
 func (m *indexedMockProvider) Analyze(ctx context.Context, system, user string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.idx >= len(m.responses) {
 		return m.responses[len(m.responses)-1], nil
 	}

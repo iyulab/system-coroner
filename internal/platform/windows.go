@@ -73,7 +73,7 @@ func WindowsChecks() []Check {
 			Name:          "Lateral Movement",
 			Description:   "Detect lateral movement via RDP, PsExec, WinRM, and Pass-the-Hash",
 			Script:        "windows/lateral_movement.ps1",
-			Timeout:       30 * time.Second,
+			Timeout:       60 * time.Second,
 			OutputFormat:  "json",
 			RequiresAdmin: true,
 		},

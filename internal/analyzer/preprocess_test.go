@@ -143,7 +143,7 @@ func TestPreprocess_ValidJSONPreserved(t *testing.T) {
 
 func TestIsKnownGoodIP(t *testing.T) {
 	tests := []struct {
-		ip      string
+		ip       string
 		wantGood bool
 	}{
 		{"10.0.0.1", true},

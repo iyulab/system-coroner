@@ -7,12 +7,12 @@ import "time"
 type FailureKind int
 
 const (
-	FailureNone       FailureKind = iota // no failure (ExitCode == 0)
-	FailureTimeout                       // killed by timeout
-	FailurePermission                    // access denied / permission denied
-	FailureScriptError                   // script returned non-zero exit code
-	FailureNotFound                      // interpreter or command not found
-	FailureUnknown                       // unclassified error
+	FailureNone        FailureKind = iota // no failure (ExitCode == 0)
+	FailureTimeout                        // killed by timeout
+	FailurePermission                     // access denied / permission denied
+	FailureScriptError                    // script returned non-zero exit code
+	FailureNotFound                       // interpreter or command not found
+	FailureUnknown                        // unclassified error
 )
 
 // String returns a short human-readable label for the failure kind.

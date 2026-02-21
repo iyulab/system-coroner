@@ -86,15 +86,15 @@ func classifyFailure(result *Result) {
 		return
 	}
 	switch result.ExitCode {
-	case 5:    // Windows: ERROR_ACCESS_DENIED
+	case 5: // Windows: ERROR_ACCESS_DENIED
 		result.FailureKind = FailurePermission
-	case 126:  // POSIX: cannot execute (permission denied)
+	case 126: // POSIX: cannot execute (permission denied)
 		result.FailureKind = FailurePermission
-	case 127:  // POSIX: command not found
+	case 127: // POSIX: command not found
 		result.FailureKind = FailureNotFound
 	case 9009: // Windows: command not recognized (interpreter not in PATH)
 		result.FailureKind = FailureNotFound
-	case -1:   // OS-level exec failure, not a script exit code
+	case -1: // OS-level exec failure, not a script exit code
 		result.FailureKind = FailureUnknown
 	default:
 		if result.ExitCode > 0 {

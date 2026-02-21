@@ -23,6 +23,41 @@ try {
         errors          = @()
     }
 
+    # Helper: extract the executable path from a command-line value string.
+    # Handles quoted paths, unquoted paths with arguments, and environment variables.
+    function Resolve-ExePath {
+        param([string]$RawValue)
+        if (-not $RawValue) { return $null }
+        $expanded = [Environment]::ExpandEnvironmentVariables($RawValue)
+        # Quoted path: "C:\path\to\file.exe" [args]
+        if ($expanded -match '^"([^"]+\.exe)"') { return $Matches[1] }
+        # Unquoted path ending with .exe before a space or end-of-string
+        if ($expanded -match '^([A-Za-z]:\\[^\s"]+\.exe)') { return $Matches[1] }
+        # First whitespace-delimited token (may omit .exe extension)
+        $token = ($expanded -split '\s+')[0].Trim('"')
+        if ($token -match '\.(exe|com|scr|pif)$') { return $token }
+        return $null
+    }
+
+    # Helper: return Authenticode signature info for an executable path.
+    function Get-SignatureInfo {
+        param([string]$Path)
+        if (-not $Path) { return [PSCustomObject]@{ status = "PathNotResolved"; signer = ""; issuer = ""; path = "" } }
+        if (-not (Test-Path -LiteralPath $Path -ErrorAction SilentlyContinue)) {
+            return [PSCustomObject]@{ status = "FileNotFound"; signer = ""; issuer = ""; path = $Path }
+        }
+        try {
+            $sig = Get-AuthenticodeSignature -LiteralPath $Path -ErrorAction Stop
+            return [PSCustomObject]@{
+                status = $sig.Status.ToString()
+                signer = if ($sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { "" }
+                issuer = if ($sig.SignerCertificate) { $sig.SignerCertificate.Issuer } else { "" }
+                path   = $Path
+            }
+        }
+        catch { return [PSCustomObject]@{ status = "Error"; signer = ""; issuer = ""; path = $Path } }
+    }
+
     # --- Registry Run keys (WFC-005: all 7 paths including WOW64) ---
     $runKeys = @(
         # 64-bit hive paths
@@ -43,10 +78,12 @@ try {
                 $props.PSObject.Properties | Where-Object {
                     $_.Name -notmatch '^PS(Path|Drive|Provider|ParentPath|ChildName)'
                 } | ForEach-Object {
+                    $exePath = Resolve-ExePath -RawValue $_.Value
                     $result.registry_run += [PSCustomObject]@{
-                        key   = $key
-                        name  = $_.Name
-                        value = $_.Value
+                        key       = $key
+                        name      = $_.Name
+                        value     = $_.Value
+                        signature = Get-SignatureInfo -Path $exePath
                     }
                 }
             }
@@ -126,6 +163,7 @@ try {
             } |
             Select-Object -Property Name, DisplayName, State, StartMode, PathName, StartName |
             ForEach-Object {
+                $exePath = Resolve-ExePath -RawValue $_.PathName
                 [PSCustomObject]@{
                     name         = $_.Name
                     display_name = $_.DisplayName
@@ -133,6 +171,7 @@ try {
                     start_mode   = $_.StartMode
                     path         = $_.PathName
                     run_as       = $_.StartName
+                    signature    = Get-SignatureInfo -Path $exePath
                 }
             }
         if ($services) {

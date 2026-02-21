@@ -1,22 +1,43 @@
 {
-  "registry_run_keys": [
+  "collected_at": "2024-01-15T10:00:00Z",
+  "hostname": "WORKSTATION-01",
+  "check": "persistence",
+  "registry_run": [
     {
-      "path": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "key": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
       "name": "SecurityHealth",
       "value": "C:\\Program Files\\Windows Defender\\MSASCuiL.exe",
-      "type": "REG_SZ"
+      "signature": {
+        "status": "Valid",
+        "signer": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+        "issuer": "CN=Microsoft Windows Production PCA 2011, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+        "path": "C:\\Program Files\\Windows Defender\\MSASCuiL.exe"
+      }
     }
   ],
   "scheduled_tasks": [
     {
-      "task_name": "\\Microsoft\\Windows\\WindowsUpdate\\Scheduled Start",
-      "status": "Ready",
-      "next_run": "2024-01-15T03:00:00",
-      "action": "C:\\Windows\\System32\\sc.exe start wuauserv",
-      "author": "Microsoft"
+      "name": "Scheduled Start",
+      "path": "\\Microsoft\\Windows\\WindowsUpdate\\",
+      "state": "Ready",
+      "run_as": "SYSTEM",
+      "run_level": "Highest",
+      "actions": [
+        {
+          "type": "MSFT_TaskExecAction",
+          "execute": "C:\\Windows\\System32\\sc.exe",
+          "arguments": "start wuauserv"
+        }
+      ],
+      "last_run": "2024-01-14T03:00:00Z",
+      "next_run": "2024-01-15T03:00:00Z"
     }
   ],
   "services": [],
-  "winlogon": [],
-  "ifeo": []
+  "winlogon": [
+    { "name": "Userinit", "value": "C:\\Windows\\system32\\userinit.exe," },
+    { "name": "Shell", "value": "explorer.exe" }
+  ],
+  "ifeo": [],
+  "errors": []
 }

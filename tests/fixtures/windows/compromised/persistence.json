@@ -1,29 +1,65 @@
 {
-  "registry_run_keys": [
+  "collected_at": "2024-01-15T10:00:00Z",
+  "hostname": "WORKSTATION-COMPROMISED",
+  "check": "persistence",
+  "registry_run": [
     {
-      "path": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
-      "name": "WindowsUpdate",
-      "value": "C:\\Windows\\Temp\\svchost.exe -connect",
-      "type": "REG_SZ"
+      "key": "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "name": "BingWallpaperDaemon",
+      "value": "C:\\Users\\victim\\AppData\\Local\\Temp\\bwp67acda14-3e4c-4144-8bf4-cf19f7bb3a52\\UnInstDaemon.exe",
+      "signature": {
+        "status": "NotSigned",
+        "signer": "",
+        "issuer": "",
+        "path": "C:\\Users\\victim\\AppData\\Local\\Temp\\bwp67acda14-3e4c-4144-8bf4-cf19f7bb3a52\\UnInstDaemon.exe"
+      }
     },
     {
-      "path": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "key": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "name": "WindowsUpdate",
+      "value": "C:\\Windows\\Temp\\svchost.exe -connect 192.168.1.100:4444",
+      "signature": {
+        "status": "NotSigned",
+        "signer": "",
+        "issuer": "",
+        "path": "C:\\Windows\\Temp\\svchost.exe"
+      }
+    },
+    {
+      "key": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
       "name": "UpdateHelper",
       "value": "powershell.exe -EncodedCommand JABjAD0ATgBlAHcALQBPAGIAagBlAGMAdAAgAFMAeQBzAHQAZQBtAC4ATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAA7AA==",
-      "type": "REG_SZ"
+      "signature": {
+        "status": "PathNotResolved",
+        "signer": "",
+        "issuer": "",
+        "path": ""
+      }
     }
   ],
   "scheduled_tasks": [
     {
-      "task_name": "\\Microsoft\\Windows\\Maintenance\\WinUpdate",
-      "status": "Ready",
-      "next_run": "2024-01-15T03:00:00",
-      "action": "C:\\Windows\\Temp\\update.bat",
-      "author": "SYSTEM"
+      "name": "WinUpdate",
+      "path": "\\Microsoft\\Windows\\Maintenance\\",
+      "state": "Ready",
+      "run_as": "SYSTEM",
+      "run_level": "Highest",
+      "actions": [
+        {
+          "type": "MSFT_TaskExecAction",
+          "execute": "C:\\Windows\\Temp\\update.bat",
+          "arguments": ""
+        }
+      ],
+      "last_run": "2024-01-14T03:00:00Z",
+      "next_run": "2024-01-15T03:00:00Z"
     }
   ],
   "services": [],
-  "winlogon": [],
+  "winlogon": [
+    { "name": "Userinit", "value": "C:\\Windows\\system32\\userinit.exe," },
+    { "name": "Shell", "value": "explorer.exe" }
+  ],
   "ifeo": [],
   "base64_detections": [
     {
@@ -31,5 +67,6 @@
       "pattern": "-EncodedCommand",
       "value": "powershell.exe -EncodedCommand JABjAD0ATgBlAHcALQBPAGIAagBlAGMAdAAgAFMAeQBzAHQAZQBtAC4ATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAA7AA=="
     }
-  ]
+  ],
+  "errors": []
 }

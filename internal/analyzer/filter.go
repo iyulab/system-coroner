@@ -156,8 +156,47 @@ func copyMap(m map[string]interface{}) map[string]interface{} {
 }
 
 // ============================================================
-// Built-in rules for the 5 new checks
+// Built-in rules
 // ============================================================
+
+// --- persistence rules ---
+
+// UnsignedTempRunKeyRule flags Run key entries where the executable is unsigned AND
+// lives in a temp/staging path — a strong indicator of a dropper establishing persistence.
+type UnsignedTempRunKeyRule struct{}
+
+func (r UnsignedTempRunKeyRule) Name() string { return "UnsignedTempRunKey" }
+func (r UnsignedTempRunKeyRule) Apply(item map[string]interface{}) (FilterResult, int, string) {
+	value := strings.ToLower(stringVal(item, "value", "path"))
+	if !containsAny(value, `\temp\`, `\appdata\local\temp\`) {
+		return FilterUncertain, 20, ""
+	}
+	sig := getNestedString(item, "signature", "status")
+	if sig == "notsigned" || sig == "hashmismatch" || sig == "unknownerror" {
+		return FilterSuspicious, 95, "unsigned executable in temp path registered as Run key: " + value
+	}
+	// Temp path alone (signature unavailable or file gone) is still suspicious
+	return FilterSuspicious, 80, "Run key executable in temp/staging directory: " + value
+}
+
+// UnsignedRunKeyRule flags Run key entries whose binaries have an invalid or missing
+// Authenticode signature outside of known system directories.
+type UnsignedRunKeyRule struct{}
+
+func (r UnsignedRunKeyRule) Name() string { return "UnsignedRunKey" }
+func (r UnsignedRunKeyRule) Apply(item map[string]interface{}) (FilterResult, int, string) {
+	sig := getNestedString(item, "signature", "status")
+	// Skip if no signature data or signature is valid
+	if sig == "" || sig == "valid" || sig == "pathnotresolved" || sig == "filenotfound" {
+		return FilterUncertain, 20, ""
+	}
+	value := strings.ToLower(stringVal(item, "value", "path"))
+	// System binaries may legitimately lack signatures in some edge cases
+	if strings.HasPrefix(value, `c:\windows\system32\`) || strings.HasPrefix(value, `c:\windows\syswow64\`) {
+		return FilterUncertain, 20, ""
+	}
+	return FilterSuspicious, 80, "Run key executable with invalid/missing signature ("+sig+"): "+value
+}
 
 // --- process_execution rules ---
 
@@ -351,6 +390,8 @@ func (r ReconCommandRule) Apply(item map[string]interface{}) (FilterResult, int,
 // Returns an empty slice for checks without specialized rules (fallback: all items uncertain).
 func RulesForCheck(checkID string) []FilterRule {
 	switch checkID {
+	case "persistence":
+		return []FilterRule{UnsignedTempRunKeyRule{}, UnsignedRunKeyRule{}}
 	case "process_execution":
 		return []FilterRule{KnownAttackToolRule{}, TempPathExecRule{}}
 	case "file_access":
@@ -378,6 +419,22 @@ func stringVal(item map[string]interface{}, keys ...string) string {
 				return s
 			}
 		}
+	}
+	return ""
+}
+
+// getNestedString traverses nested maps by the given keys and returns the lowercased string value.
+func getNestedString(item map[string]interface{}, keys ...string) string {
+	var cur interface{} = item
+	for _, k := range keys {
+		m, ok := cur.(map[string]interface{})
+		if !ok {
+			return ""
+		}
+		cur = m[k]
+	}
+	if s, ok := cur.(string); ok {
+		return strings.ToLower(s)
 	}
 	return ""
 }

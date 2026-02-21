@@ -1,0 +1,46 @@
+{
+  "collected_at": "2026-02-22T03:35:00Z",
+  "hostname": "DC01",
+  "check": "staging_exfiltration",
+  "temp_archives": [
+    {
+      "file_name": "loot.zip",
+      "file_path": "C:\\Users\\jsmith\\AppData\\Local\\Temp\\loot.zip",
+      "size_bytes": 524288000,
+      "created": "2026-02-22T02:58:00Z",
+      "modified": "2026-02-22T02:59:00Z"
+    },
+    {
+      "file_name": "dc_data.7z",
+      "file_path": "C:\\Users\\Public\\dc_data.7z",
+      "size_bytes": 1073741824,
+      "created": "2026-02-22T02:30:00Z",
+      "modified": "2026-02-22T02:50:00Z"
+    }
+  ],
+  "usb_devices": [
+    {
+      "device_class": "Disk&Ven_Kingston&Prod_DataTraveler_3.0",
+      "instance_id": "A&2B3C4D5E&0&0001",
+      "friendly_name": "Kingston DataTraveler 3.0 USB Device",
+      "manufacturer": "(Standard disk drives)"
+    }
+  ],
+  "vss_deletion": [
+    {
+      "time": "2026-02-22T03:00:00Z",
+      "command_line": "vssadmin delete shadows /all /quiet",
+      "process_name": "vssadmin.exe",
+      "account": "jsmith"
+    }
+  ],
+  "exfil_tool_prefetch": [
+    {
+      "name": "RCLONE.EXE",
+      "last_run": "2026-02-22T02:59:00Z",
+      "created": "2026-02-22T00:15:00Z"
+    }
+  ],
+  "srum_large_senders": [],
+  "errors": []
+}

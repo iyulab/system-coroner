@@ -122,5 +122,14 @@ func WindowsChecks() []Check {
 			OutputFormat:  "json",
 			RequiresAdmin: false,
 		},
+		{
+			ID:            "staging_exfiltration",
+			Name:          "Data Staging & Exfiltration",
+			Description:   "Detect data staging artifacts: temp archives, USB devices, VSS deletion, exfiltration tools",
+			Script:        "windows/staging_exfiltration.ps1",
+			Timeout:       30 * time.Second,
+			OutputFormat:  "json",
+			RequiresAdmin: true,
+		},
 	}
 }

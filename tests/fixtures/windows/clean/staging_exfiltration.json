@@ -1,0 +1,18 @@
+{
+  "collected_at": "2026-02-22T09:00:00Z",
+  "hostname": "WORKSTATION01",
+  "check": "staging_exfiltration",
+  "temp_archives": [],
+  "usb_devices": [
+    {
+      "device_class": "Disk&Ven_SanDisk&Prod_Cruzer_Blade",
+      "instance_id": "6&23D7B7C4&0&0001",
+      "friendly_name": "SanDisk Cruzer Blade USB Device",
+      "manufacturer": "(Standard disk drives)"
+    }
+  ],
+  "vss_deletion": [],
+  "exfil_tool_prefetch": [],
+  "srum_large_senders": [],
+  "errors": []
+}

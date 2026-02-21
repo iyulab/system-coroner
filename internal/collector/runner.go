@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -28,7 +29,10 @@ func RunCheck(ctx context.Context, check platform.Check, scriptContent []byte) R
 	ctx, cancel := context.WithTimeout(ctx, check.Timeout)
 	defer cancel()
 
-	cmd, err := buildCommand(ctx, check, scriptContent)
+	cmd, cleanup, err := buildCommand(ctx, check, scriptContent)
+	if cleanup != nil {
+		defer cleanup()
+	}
 	if err != nil {
 		result.Error = fmt.Errorf("build command: %w", err)
 		result.ExitCode = -1
@@ -114,37 +118,63 @@ func classifyFailure(result *Result) {
 }
 
 // buildCommand creates the appropriate os/exec.Cmd for the current platform.
-func buildCommand(ctx context.Context, check platform.Check, scriptContent []byte) (*exec.Cmd, error) {
+// Returns the command, a cleanup function (may be nil), and an error.
+func buildCommand(ctx context.Context, check platform.Check, scriptContent []byte) (*exec.Cmd, func(), error) {
 	switch runtime.GOOS {
 	case "windows":
 		return buildPowerShellCommand(ctx, scriptContent)
 	case "linux", "darwin":
 		return buildBashCommand(ctx, scriptContent)
 	default:
-		return nil, fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+		return nil, nil, fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
 }
 
-// buildPowerShellCommand creates a PowerShell command using -EncodedCommand.
-// Scripts are passed as UTF-16LE Base64 encoded strings to avoid execution policy
-// and encoding issues.
-func buildPowerShellCommand(ctx context.Context, scriptContent []byte) (*exec.Cmd, error) {
-	encoded := encodeForPowerShell(string(scriptContent))
+// buildPowerShellCommand creates a PowerShell command using a temp file.
+// Falls back to -EncodedCommand if temp file creation fails.
+// This avoids Windows Defender ASR blocking Base64-encoded commands containing
+// WMI/process keywords.
+func buildPowerShellCommand(ctx context.Context, scriptContent []byte) (*exec.Cmd, func(), error) {
+	// Try temp file approach first (avoids Defender ASR blocking)
+	tmpFile, err := os.CreateTemp("", "coroner-*.ps1")
+	if err != nil {
+		// fallback: -EncodedCommand 방식
+		encoded := encodeForPowerShell(string(scriptContent))
+		cmd := exec.CommandContext(ctx,
+			"powershell.exe",
+			"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+			"-EncodedCommand", encoded,
+		)
+		return cmd, func() {}, nil
+	}
+	tmpPath := tmpFile.Name()
+	if _, err := tmpFile.Write(scriptContent); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		// fallback: -EncodedCommand 방식
+		encoded := encodeForPowerShell(string(scriptContent))
+		cmd := exec.CommandContext(ctx,
+			"powershell.exe",
+			"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+			"-EncodedCommand", encoded,
+		)
+		return cmd, func() {}, nil
+	}
+	tmpFile.Close()
+
 	cmd := exec.CommandContext(ctx,
 		"powershell.exe",
-		"-NoProfile",
-		"-NonInteractive",
-		"-ExecutionPolicy", "Bypass",
-		"-EncodedCommand", encoded,
+		"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+		"-File", tmpPath,
 	)
-	return cmd, nil
+	return cmd, func() { os.Remove(tmpPath) }, nil
 }
 
 // buildBashCommand creates a Bash command that reads the script from stdin.
-func buildBashCommand(ctx context.Context, scriptContent []byte) (*exec.Cmd, error) {
+func buildBashCommand(ctx context.Context, scriptContent []byte) (*exec.Cmd, func(), error) {
 	cmd := exec.CommandContext(ctx, "bash", "-s")
 	cmd.Stdin = bytes.NewReader(scriptContent)
-	return cmd, nil
+	return cmd, func() {}, nil
 }
 
 // encodeForPowerShell converts a UTF-8 string to UTF-16LE Base64 for -EncodedCommand.

@@ -4,6 +4,8 @@
 
 system-coroner scans a server for indicators of compromise (IoC) the moment it runs, feeds the raw evidence to an LLM for analysis, and produces a single `report.html`. No agent installation. One binary, one run.
 
+![report.html preview](docs/report-preview.png)
+
 ---
 
 ## What this tool answers

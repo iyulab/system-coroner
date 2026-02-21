@@ -325,6 +325,36 @@ Before LLM analysis, `internal/analyzer/filter.go` applies deterministic rules t
 SUSPICIOUS items are forwarded to the LLM with `rule_flags` annotation for confirmation/refutation.
 SAFE items (Windows paths, known-good domains) are excluded before LLM to reduce token usage.
 
+## Interactive Serve Mode (`--serve`)
+
+분석 완료 후 `--serve` 플래그를 사용하면 로컬 HTTP 서버가 시작되고 브라우저가 자동으로 열린다.
+
+```
+coroner --serve
+coroner --serve --port 9000
+coroner --fixture tests/fixtures/ --skip-collect --serve
+```
+
+리포트를 보며 "Analyst Feedback" 버튼으로 분석자 컨텍스트를 입력하면 LLM이 재평가하여 리포트를 업데이트한다.
+
+### Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | 현재 리포트 HTML 서빙 |
+| `/health` | GET | 서버 상태 확인 (`{"status":"ok"}`) |
+| `/re-evaluate` | POST | 분석자 의견으로 LLM 재분석, 새 HTML 반환 |
+
+### Re-evaluate Request
+
+```json
+{
+  "context": "rclone.exe는 백업용으로 설치한 도구입니다"
+}
+```
+
+---
+
 ## Planned Additions (Windows)
 
 - `ransomware_indicators` — ransomware activity patterns (VSS deletion, mass file modification)

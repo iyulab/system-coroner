@@ -35,6 +35,8 @@ LLM이 이를 분석한 뒤 단일 report.html을 생성합니다.
 	rootCmd.Flags().String("fixture", "", "픽스처 디렉토리 경로 (수집 대신 파일 사용)")
 	rootCmd.Flags().Bool("skip-collect", false, "수집 건너뛰기 (--fixture와 조합)")
 	rootCmd.Flags().BoolP("verbose", "v", false, "상세 로그 출력")
+	rootCmd.Flags().Bool("serve", false, "분석 완료 후 인터랙티브 서버 시작")
+	rootCmd.Flags().Int("port", 8742, "서버 포트 (--serve와 함께 사용)")
 	rootCmd.Version = fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date)
 	rootCmd.AddCommand(newUpdateCmd(version))
 
@@ -51,6 +53,8 @@ func run(cmd *cobra.Command, args []string) error {
 	fixture, _ := cmd.Flags().GetString("fixture")
 	skipCollect, _ := cmd.Flags().GetBool("skip-collect")
 	verbose, _ := cmd.Flags().GetBool("verbose")
+	serve, _ := cmd.Flags().GetBool("serve")
+	port, _ := cmd.Flags().GetInt("port")
 
 	// Parse --only flag
 	var only []string
@@ -82,6 +86,8 @@ func run(cmd *cobra.Command, args []string) error {
 		SkipCollect: skipCollect,
 		Verbose:     verbose,
 		Version:     fmt.Sprintf("%s (%s)", version, commit),
+		Serve:       serve,
+		ServePort:   port,
 	})
 
 	return orch.Run(cmd.Context())

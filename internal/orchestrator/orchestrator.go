@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/iyulab/system-coroner/internal/analyzer"
+	"github.com/iyulab/system-coroner/internal/browser"
 	"github.com/iyulab/system-coroner/internal/collector"
 	"github.com/iyulab/system-coroner/internal/config"
 	"github.com/iyulab/system-coroner/internal/platform"
 	"github.com/iyulab/system-coroner/internal/reporter"
+	"github.com/iyulab/system-coroner/internal/server"
 	"github.com/iyulab/system-coroner/internal/sigma"
 	"github.com/iyulab/system-coroner/scripts"
 )
@@ -27,6 +29,8 @@ type Options struct {
 	SkipCollect bool
 	Verbose     bool
 	Version     string
+	Serve       bool // start interactive server after analysis
+	ServePort   int  // server port (default 8742)
 }
 
 // Orchestrator runs the three-stage pipeline.
@@ -314,6 +318,69 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 	fmt.Printf("Report: %s\n", reportPath)
 	if zipErr == nil {
 		fmt.Printf("Evidence: %s\n", zipPath)
+	}
+
+	// --- Serve Mode ---
+	if o.opts.Serve {
+		reEvalFn := func(reqCtx context.Context, analystContext string) (*reporter.ReportData, error) {
+			reAnalyzer := analyzer.New(provider, hostname, osName, o.opts.Verbose)
+			reAnalyzer.SetAnalystContext(analystContext)
+
+			newResult, err := reAnalyzer.AnalyzeAll(reqCtx, checkData)
+			if err != nil {
+				return nil, err
+			}
+
+			newAgg := &reporter.Aggregator{}
+			newIsolation := newAgg.ShouldIsolate(newResult.Findings)
+			newConfidence := reporter.SummarizeConfidence(newResult.Findings)
+			newIoCs := reporter.CollectAllIoCs(newResult.Findings)
+
+			newData := reportData
+			newData.Findings = newResult.Findings
+			newData.RawFindings = newResult.RawFindings
+			newData.Verdict = newResult.Verdict
+			newData.Isolation = newIsolation
+			newData.ConfidenceSummary = newConfidence
+			newData.IoCs = newIoCs
+			newData.AnalystContext = analystContext
+			return &newData, nil
+		}
+
+		htmlBytes, err := os.ReadFile(reportPath)
+		if err != nil {
+			return fmt.Errorf("read report: %w", err)
+		}
+
+		renderFn := func(data *reporter.ReportData) (string, error) {
+			newRep, err := reporter.New()
+			if err != nil {
+				return "", err
+			}
+			return newRep.GenerateString(*data)
+		}
+
+		port := o.opts.ServePort
+		if port == 0 {
+			port = 8742
+		}
+
+		srv := server.New(nil, string(htmlBytes), reEvalFn)
+		srv.SetRenderFunc(renderFn)
+
+		addr, err := srv.Start(ctx, port)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[*] Warning: serve mode failed: %v\n", err)
+		} else {
+			url := "http://" + addr
+			fmt.Fprintf(os.Stderr, "[*] Interactive mode: %s\n", url)
+			fmt.Printf("Interactive: %s\n", url)
+			browser.Open(url)
+
+			fmt.Fprintf(os.Stderr, "[*] Press Ctrl+C to stop server\n")
+			<-ctx.Done()
+			srv.Stop()
+		}
 	}
 
 	return nil

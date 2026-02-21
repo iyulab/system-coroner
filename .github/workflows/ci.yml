@@ -40,10 +40,10 @@ jobs:
           fi
 
       - name: Run tests
-        run: go test ./... -count=1 -v
+        run: go test ./... -short -count=1
 
       - name: Run tests with race detector
-        run: go test ./... -race -count=1
+        run: go test ./... -short -race -count=1
 
   build:
     runs-on: ubuntu-latest

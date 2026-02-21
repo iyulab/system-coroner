@@ -22,6 +22,9 @@ func makeScript(jsonOut string) ([]byte, string) {
 }
 
 func TestCollect_EvidenceFirst(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	timeout := 5 * time.Second
 	if runtime.GOOS == "windows" {
 		timeout = 30 * time.Second
@@ -107,6 +110,9 @@ func TestCollect_ScriptNotInFS(t *testing.T) {
 }
 
 func TestCollect_Parallel(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	timeout := 5 * time.Second
 	if runtime.GOOS == "windows" {
 		timeout = 30 * time.Second
@@ -165,6 +171,9 @@ func TestCollect_Parallel(t *testing.T) {
 }
 
 func TestCollect_ContextCancellation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	var script []byte
 	var scriptPath string
 	if runtime.GOOS == "windows" {

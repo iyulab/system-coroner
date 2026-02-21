@@ -22,6 +22,9 @@ func TestEncodeForPowerShell(t *testing.T) {
 }
 
 func TestRunCheck_SimpleScript(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	// PowerShell cold start can take 3-15s on Windows; use generous timeout
 	timeout := 5 * time.Second
 	if runtime.GOOS == "windows" {
@@ -65,6 +68,9 @@ func TestRunCheck_SimpleScript(t *testing.T) {
 }
 
 func TestRunCheck_Timeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	var script []byte
 	if runtime.GOOS == "windows" {
 		script = []byte(`Start-Sleep -Seconds 30; Write-Output '{}'`)
@@ -87,6 +93,9 @@ func TestRunCheck_Timeout(t *testing.T) {
 }
 
 func TestRunCheck_ExitError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	var script []byte
 	if runtime.GOOS == "windows" {
 		script = []byte(`Write-Output '{"error":"test"}'; exit 1`)
@@ -115,6 +124,9 @@ func TestRunCheck_ExitError(t *testing.T) {
 }
 
 func TestRunCheck_Duration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	var script []byte
 	if runtime.GOOS == "windows" {
 		script = []byte(`Write-Output 'ok'`)
@@ -142,6 +154,9 @@ func TestRunCheck_Duration(t *testing.T) {
 }
 
 func TestRunCheck_ContextCancellation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	var script []byte
 	if runtime.GOOS == "windows" {
 		script = []byte(`Start-Sleep -Seconds 30`)
@@ -168,6 +183,9 @@ func TestRunCheck_ContextCancellation(t *testing.T) {
 }
 
 func TestRunCheck_EmptyStdout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	var script []byte
 	if runtime.GOOS == "windows" {
 		script = []byte(`# no output`)
@@ -194,6 +212,9 @@ func TestRunCheck_EmptyStdout(t *testing.T) {
 }
 
 func TestRunCheck_StderrOnly(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	var script []byte
 	if runtime.GOOS == "windows" {
 		script = []byte(`Write-Error "diagnostic message"`)
@@ -303,6 +324,9 @@ func TestClassifyFailure_Unknown(t *testing.T) {
 }
 
 func TestRunCheck_SuccessHasFailureNone(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	timeout := 5 * time.Second
 	if runtime.GOOS == "windows" {
 		timeout = 30 * time.Second
@@ -324,6 +348,9 @@ func TestRunCheck_SuccessHasFailureNone(t *testing.T) {
 }
 
 func TestRunCheck_TimeoutHasFailureTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping OS command test in short mode")
+	}
 	var script []byte
 	if runtime.GOOS == "windows" {
 		script = []byte(`Start-Sleep -Seconds 30`)

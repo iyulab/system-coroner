@@ -38,6 +38,21 @@ CONFIDENCE CALIBRATION:
 NEVER assign confirmed based on a single data source.
 NEVER assign low when multiple independent indicators align.
 
+ATTACK CHAIN STAGE SEPARATION:
+- Each stage of a multi-stage attack chain requires its own independent evidence. Do NOT elevate confidence for one stage based on evidence from another.
+- Brute-force failures (Event 4625) alone do NOT prove the attacker succeeded. Confirmed initial access requires affirmative evidence such as Event 4624 from the attacker IP, or authenticated commands traceable to that session.
+- When post-exploitation activity is confirmed but the initial access vector is ambiguous, report them with SEPARATE confidence levels: "post-exploitation: confirmed / initial access via brute-force: suspected". This distinction directly affects remediation — a misidentified entry point leaves the real one open.
+
+ALTERNATIVE INITIAL ACCESS VECTORS:
+- When initial access evidence is absent or ambiguous, you MUST enumerate at least 2 plausible alternative scenarios before concluding.
+- Temporal proximity is NOT causation. A brute-force window ending 4 minutes before suspicious activity does not establish brute-force as the access vector.
+- Always consider: pre-existing remote access tool, insider/physical access, different external IP not visible in logs, log truncation masking the real entry event, VPN/proxy hiding true source.
+
+LEGITIMATE ADMINISTRATIVE ACTIVITY TEST:
+- Before assigning "confirmed" or "high" to any finding, explicitly ask: "Can this be fully explained by routine administrative activity?"
+- The following are NORMAL in managed environments and require additional corroborating evidence to treat as malicious: creating service/test accounts with password_never_expires, installing remote management tools (RustDesk/TeamViewer/AnyDesk), deleting old operational accounts, using explicit credentials (runas/scheduled tasks), running PowerShell scripts for automation, connecting USB storage for backups.
+- If the legitimate explanation fits, downgrade confidence by one tier and record the benign interpretation in your reasoning chain.
+
 For each finding, include your reasoning chain:
 1. OBSERVATION: What exactly did you see in the data?
 2. BASELINE: What would be NORMAL for this type of data? What benign explanation exists?
@@ -91,6 +106,21 @@ CONFIDENCE CALIBRATION:
 NEVER assign confirmed based on a single data source.
 NEVER assign low when multiple independent indicators align.
 
+ATTACK CHAIN STAGE SEPARATION:
+- Each stage of a multi-stage attack chain requires its own independent evidence. Do NOT elevate confidence for one stage based on evidence from another.
+- Failed authentication attempts (auth.log brute-force) alone do NOT prove the attacker gained access. Confirmed initial access requires affirmative evidence such as a successful auth entry or a shell session traceable to the attacker source.
+- When post-exploitation activity is confirmed but the initial access vector is ambiguous, report them with SEPARATE confidence levels. A misidentified entry point leaves the real one open.
+
+ALTERNATIVE INITIAL ACCESS VECTORS:
+- When initial access evidence is absent or ambiguous, you MUST enumerate at least 2 plausible alternative scenarios before concluding.
+- Temporal proximity is NOT causation.
+- Always consider: pre-existing backdoor/cron job, insider/physical access, different source IP not captured in logs, log rotation masking the real entry, shared credentials.
+
+LEGITIMATE ADMINISTRATIVE ACTIVITY TEST:
+- Before assigning "confirmed" or "high" to any finding, explicitly ask: "Can this be fully explained by routine administrative activity?"
+- The following are NORMAL in managed Linux environments and require additional corroborating evidence: new system accounts, cron jobs for automation, SSH key additions, sudo usage, package installs, outbound connections from maintenance tools.
+- If the legitimate explanation fits, downgrade confidence by one tier and record the benign interpretation in your reasoning chain.
+
 For each finding, include your reasoning chain:
 1. OBSERVATION: What exactly did you see in the data?
 2. BASELINE: What would be NORMAL for this type of data? What benign explanation exists?
@@ -133,13 +163,14 @@ DATA:
 	"account_compromise": `Analyze the following account and authentication data from server %s for persistence and privilege escalation indicators.
 
 ANALYSIS TARGETS:
-1. New accounts created outside change windows (Event 4720)
+1. New accounts created outside change windows (Event 4720) — note: account creation time is available via event timestamp
 2. Accounts added to privileged groups (Event 4732)
 3. Explicit credential use from abnormal processes (Event 4648 — Pass-the-Hash indicator)
 4. Failed logon patterns: brute force threshold >50 from same source/hour (Event 4625)
-5. Temporal correlation between these events
-6. Hidden accounts ($ suffix) or accounts with password-never-expires + admin
-7. Unknown accounts in Administrators group
+5. CRITICAL — Brute-force correlation: compare failed_logons (4625) source IPs against successful_logons_by_ip (4624). If an IP appears in both, brute-force SUCCESS is likely. If an IP has only 4625 entries with NO corresponding 4624, brute-force likely FAILED — do NOT assume initial access was via brute-force.
+6. Interactive/RDP logon presence (interactive_logons): who logged in interactively during suspicious timeframe? Was there a legitimate admin session?
+7. Hidden accounts ($ suffix) or accounts with password-never-expires + admin rights
+8. Unknown accounts in Administrators group
 
 DATA:
 %s`,

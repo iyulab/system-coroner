@@ -16,11 +16,13 @@ try {
         hostname     = $env:COMPUTERNAME
         check        = "account_compromise"
         events       = @{
-            account_created  = @()
-            account_deleted  = @()
-            group_added      = @()
-            explicit_creds   = @()
-            failed_logons    = @()
+            account_created         = @()
+            account_deleted         = @()
+            group_added             = @()
+            explicit_creds          = @()
+            failed_logons           = @()
+            successful_logons_by_ip = @()  # EID 4624 from external IPs — brute-force correlation
+            interactive_logons      = @()  # EID 4624 Type 2/10 — console/RDP presence
         }
         admin_members = @()
         recent_accounts = @()
@@ -31,7 +33,7 @@ try {
     # --- Security event log queries (72 hours) ---
     $startTime = (Get-Date).AddHours(-72)
 
-    # EID 4720: Account created
+    # EID 4720: Account created — structured parse (target account + who created it)
     try {
         $events = Get-WinEvent -FilterHashtable @{
             LogName = 'Security'; Id = 4720; StartTime = $startTime
@@ -39,9 +41,9 @@ try {
         if ($events) {
             $result.events.account_created = @($events | ForEach-Object {
                 [PSCustomObject]@{
-                    time    = $_.TimeCreated.ToString("o")
-                    message = $_.Message -replace '\r?\n', ' ' | Select-Object -First 1
-                    xml     = $_.ToXml()
+                    time        = $_.TimeCreated.ToString("o")
+                    target_user = try { $_.Properties[0].Value } catch { "" }  # new account name
+                    created_by  = try { $_.Properties[2].Value } catch { "" }  # creator account
                 }
             })
         }
@@ -116,6 +118,64 @@ try {
     }
     catch { $result.errors += "eid4625: $($_.Exception.Message)" }
 
+    # EID 4624: Successful logons — critical for brute-force correlation
+    # If 4625 (failures) spike then 4624 (success) from same IP follows → confirmed initial access
+    # If 4625 spikes but NO 4624 from that IP → brute-force likely failed
+    try {
+        $events4624 = Get-WinEvent -FilterHashtable @{
+            LogName = 'Security'; Id = 4624; StartTime = $startTime
+        } -MaxEvents 1000 -ErrorAction SilentlyContinue
+
+        if ($events4624) {
+            # Part A: Network logons (Type 3=network, 10=RemoteInteractive) from external IPs
+            # Correlate against failed_logons to detect successful brute-force
+            $extNetLogons = $events4624 | Where-Object {
+                $logonType = try { $_.Properties[8].Value } catch { -1 }
+                $srcIp = try { $_.Properties[18].Value } catch { "" }
+                ($logonType -in @(3, 10)) -and
+                $srcIp -and $srcIp -ne '-' -and $srcIp -ne '::1' -and $srcIp -ne '' -and
+                $srcIp -notmatch '^(127\.|0\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)'
+            }
+            if ($extNetLogons) {
+                $grouped = $extNetLogons | Group-Object { try { $_.Properties[18].Value } catch { "-" } } | ForEach-Object {
+                    $sample = $_.Group | Select-Object -First 1
+                    [PSCustomObject]@{
+                        source_ip   = $_.Name
+                        count       = $_.Count
+                        first       = ($_.Group | Select-Object -Last 1).TimeCreated.ToString("o")
+                        last        = ($_.Group | Select-Object -First 1).TimeCreated.ToString("o")
+                        logon_type  = try { $sample.Properties[8].Value } catch { 0 }
+                        target_user = try { $sample.Properties[5].Value } catch { "" }
+                    }
+                } | Sort-Object count -Descending | Select-Object -First 20
+                $result.events.successful_logons_by_ip = @($grouped)
+            }
+
+            # Part B: Interactive/RDP logons (Type 2=Console, 10=RDP)
+            # Shows whether a person was physically/remotely present on the machine
+            $skipUsers = @('SYSTEM', 'LOCAL SERVICE', 'NETWORK SERVICE', 'ANONYMOUS LOGON')
+            $interactiveLogons = $events4624 | Where-Object {
+                $logonType = try { $_.Properties[8].Value } catch { -1 }
+                $user = try { $_.Properties[5].Value } catch { "" }
+                ($logonType -in @(2, 10)) -and
+                ($user -notin $skipUsers) -and
+                -not ($user -match '^(UMFD|DWM)-\d+$')
+            } | Select-Object -First 20 | ForEach-Object {
+                [PSCustomObject]@{
+                    time        = $_.TimeCreated.ToString("o")
+                    logon_type  = try { $_.Properties[8].Value } catch { 0 }  # 2=Console, 10=RDP
+                    user        = try { $_.Properties[5].Value } catch { "" }
+                    workstation = try { $_.Properties[11].Value } catch { "" }
+                    source_ip   = try { $_.Properties[18].Value } catch { "-" }
+                }
+            }
+            if ($interactiveLogons) {
+                $result.events.interactive_logons = @($interactiveLogons)
+            }
+        }
+    }
+    catch { $result.errors += "eid4624: $($_.Exception.Message)" }
+
     # --- Current Administrators group members ---
     try {
         $admins = Get-LocalGroupMember -Group "Administrators" -ErrorAction SilentlyContinue
@@ -131,19 +191,18 @@ try {
     }
     catch { $result.errors += "admin_members: $($_.Exception.Message)" }
 
-    # --- Recently created local accounts ---
+    # --- All local accounts (no description filter — suspicious accounts often have no description) ---
     try {
-        $users = Get-LocalUser -ErrorAction SilentlyContinue |
-            Where-Object { $_.Description -ne $null } |
-            ForEach-Object {
-                [PSCustomObject]@{
-                    name              = $_.Name
-                    enabled           = $_.Enabled
-                    password_expires  = if ($_.PasswordExpires) { $_.PasswordExpires.ToString("o") } else { "never" }
-                    last_logon        = if ($_.LastLogon) { $_.LastLogon.ToString("o") } else { "" }
-                    description       = $_.Description
-                }
+        $users = Get-LocalUser -ErrorAction SilentlyContinue | ForEach-Object {
+            [PSCustomObject]@{
+                name              = $_.Name
+                enabled           = $_.Enabled
+                password_expires  = if ($_.PasswordExpires) { $_.PasswordExpires.ToString("o") } else { "never" }
+                password_last_set = if ($_.PasswordLastSet) { $_.PasswordLastSet.ToString("o") } else { "" }
+                last_logon        = if ($_.LastLogon) { $_.LastLogon.ToString("o") } else { "" }
+                description       = if ($_.Description) { $_.Description } else { "" }
             }
+        }
         if ($users) {
             $result.recent_accounts = @($users)
         }

@@ -84,30 +84,16 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Check if VERSION changed
-        id: version_check
+      - name: Create tag if missing
         run: |
-          if git diff HEAD~1 HEAD --name-only | grep -q "^VERSION$"; then
-            VERSION=$(cat VERSION)
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "VERSION changed to $VERSION"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "VERSION not changed, skipping tag"
-          fi
-
-      - name: Create and push tag
-        if: steps.version_check.outputs.changed == 'true'
-        run: |
-          VERSION="${{ steps.version_check.outputs.version }}"
+          VERSION=$(cat VERSION)
           TAG="v${VERSION}"
-          if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+          if git ls-remote --tags origin "$TAG" | grep -q "refs/tags/$TAG"; then
             echo "Tag $TAG already exists, skipping"
-            exit 0
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+            echo "Created and pushed tag $TAG"
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
-          echo "Created and pushed tag $TAG"

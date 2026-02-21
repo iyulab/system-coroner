@@ -1,0 +1,34 @@
+{
+  "collected_at": "2026-02-22T03:25:00Z",
+  "hostname": "DC01",
+  "check": "file_access",
+  "recent_items": [
+    {
+      "lnk_name": "loot.zip.lnk",
+      "target_path": "C:\\Users\\jsmith\\AppData\\Local\\Temp\\loot.zip",
+      "accessed": "2026-02-22T02:58:00Z",
+      "is_sensitive": false
+    }
+  ],
+  "sensitive_lnk": [
+    {
+      "lnk_name": "SAM.lnk",
+      "target_path": "C:\\Windows\\System32\\config\\SAM",
+      "accessed": "2026-02-22T02:43:00Z",
+      "is_sensitive": true
+    },
+    {
+      "lnk_name": "NTDS.dit.lnk",
+      "target_path": "C:\\Windows\\NTDS\\NTDS.dit",
+      "accessed": "2026-02-22T02:44:00Z",
+      "is_sensitive": true
+    },
+    {
+      "lnk_name": "admin.pfx.lnk",
+      "target_path": "C:\\Users\\Administrator\\Desktop\\admin.pfx",
+      "accessed": "2026-02-22T02:40:00Z",
+      "is_sensitive": true
+    }
+  ],
+  "errors": []
+}

@@ -104,5 +104,14 @@ func WindowsChecks() []Check {
 			OutputFormat:  "json",
 			RequiresAdmin: true,
 		},
+		{
+			ID:            "file_access",
+			Name:          "File Access Artifacts",
+			Description:   "Detect files and folders browsed by attacker via Recent Items LNK files and sensitive path access",
+			Script:        "windows/file_access.ps1",
+			Timeout:       30 * time.Second,
+			OutputFormat:  "json",
+			RequiresAdmin: false,
+		},
 	}
 }

@@ -1,0 +1,15 @@
+{
+  "collected_at": "2026-02-22T09:00:00Z",
+  "hostname": "WORKSTATION01",
+  "check": "file_access",
+  "recent_items": [
+    {
+      "lnk_name": "quarterly_report.docx.lnk",
+      "target_path": "C:\\Users\\alice\\Documents\\quarterly_report.docx",
+      "accessed": "2026-02-21T14:30:00Z",
+      "is_sensitive": false
+    }
+  ],
+  "sensitive_lnk": [],
+  "errors": []
+}

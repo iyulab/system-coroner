@@ -434,6 +434,23 @@ INDIVIDUAL CHECK FINDINGS:
 
 Respond with JSON matching the verdict schema.`
 
+// InjectAnalystContext prepends analyst-provided context to a user prompt.
+// If analystContext is empty, the original prompt is returned unchanged.
+func InjectAnalystContext(userPrompt, analystContext string) string {
+	if analystContext == "" {
+		return userPrompt
+	}
+	header := fmt.Sprintf(`ANALYST CONTEXT (provided by the analyst reviewing this report):
+%s
+
+Based on the above context, update your analysis. Items the analyst has explicitly confirmed as normal should have their risk level and confidence reduced accordingly. Do NOT fabricate — only adjust items that are directly addressed by the analyst's context.
+
+---
+
+`, analystContext)
+	return header + userPrompt
+}
+
 // BuildSynthesisPrompt creates the cross-analysis prompt.
 func BuildSynthesisPrompt(hostname, osName string, checkCount int, findingsJSON string) string {
 	serverDesc := hostname

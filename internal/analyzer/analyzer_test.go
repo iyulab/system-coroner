@@ -375,6 +375,68 @@ func TestBuildSynthesisPrompt_EmptyOS(t *testing.T) {
 	}
 }
 
+func TestAnalyzer_AnalystContextInjected(t *testing.T) {
+	var capturedPrompts []string
+	mock := &capturingMockProvider{
+		response: sampleFindingJSON("c2_connections", "high", "high"),
+		onCall: func(system, user string) {
+			capturedPrompts = append(capturedPrompts, user)
+		},
+	}
+
+	a := New(mock, "TEST-HOST", "windows", false)
+	a.SetAnalystContext("rclone.exe는 정상 백업 도구")
+	_, _ = a.AnalyzeAll(context.Background(), map[string]string{
+		"c2_connections": `{"connections":[]}`,
+	})
+
+	// The first prompt (per-check) should contain the analyst context
+	if len(capturedPrompts) == 0 {
+		t.Fatal("no prompts captured")
+	}
+	firstPrompt := capturedPrompts[0]
+	if !contains(firstPrompt, "rclone.exe는 정상 백업 도구") {
+		t.Errorf("analyst context not injected into prompt")
+	}
+	if !contains(firstPrompt, "ANALYST CONTEXT") {
+		t.Errorf("ANALYST CONTEXT header not found in prompt")
+	}
+}
+
+func TestInjectAnalystContext_Empty(t *testing.T) {
+	original := "original prompt"
+	result := InjectAnalystContext(original, "")
+	if result != original {
+		t.Errorf("empty context should return original prompt, got: %s", result)
+	}
+}
+
+func TestInjectAnalystContext_NonEmpty(t *testing.T) {
+	result := InjectAnalystContext("original", "my context")
+	if !contains(result, "ANALYST CONTEXT") {
+		t.Error("should contain ANALYST CONTEXT header")
+	}
+	if !contains(result, "my context") {
+		t.Error("should contain the analyst context")
+	}
+	if !contains(result, "original") {
+		t.Error("should contain the original prompt")
+	}
+}
+
+// capturingMockProvider captures the user prompt for inspection.
+type capturingMockProvider struct {
+	response string
+	onCall   func(system, user string)
+}
+
+func (m *capturingMockProvider) Analyze(ctx context.Context, system, user string) (string, error) {
+	if m.onCall != nil {
+		m.onCall(system, user)
+	}
+	return m.response, nil
+}
+
 func TestOllamaProvider_ImplementsFormatSetter(t *testing.T) {
 	p, err := NewProvider("ollama", "", "test-model", "", 0)
 	if err != nil {

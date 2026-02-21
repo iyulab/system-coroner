@@ -16,11 +16,12 @@ type ProgressFunc func(checkID string, done, total int, elapsed time.Duration, e
 
 // Analyzer orchestrates the two-phase LLM analysis pipeline.
 type Analyzer struct {
-	provider   Provider
-	hostname   string
-	osName     string
-	verbose    bool
-	onProgress ProgressFunc
+	provider       Provider
+	hostname       string
+	osName         string
+	verbose        bool
+	onProgress     ProgressFunc
+	analystContext string
 }
 
 // New creates an Analyzer with the given LLM provider.
@@ -36,6 +37,11 @@ func New(provider Provider, hostname, osName string, verbose bool) *Analyzer {
 // SetProgress sets a callback invoked after each per-check analysis completes.
 func (a *Analyzer) SetProgress(fn ProgressFunc) {
 	a.onProgress = fn
+}
+
+// SetAnalystContext stores analyst-provided context for use during re-evaluation.
+func (a *Analyzer) SetAnalystContext(ctx string) {
+	a.analystContext = ctx
 }
 
 // AnalyzeAll runs Phase 1 (per-check) and Phase 2 (synthesis) analysis.
@@ -90,6 +96,7 @@ func (a *Analyzer) AnalyzeCheck(ctx context.Context, checkID, data string) (Find
 	}
 
 	prompt := BuildCheckPrompt(checkID, a.hostname, a.osName, pre.Data)
+	prompt = InjectAnalystContext(prompt, a.analystContext)
 	systemPrompt := GetSystemPrompt(a.osName)
 
 	if a.verbose {

@@ -95,5 +95,14 @@ func WindowsChecks() []Check {
 			OutputFormat:  "json",
 			RequiresAdmin: true,
 		},
+		{
+			ID:            "process_execution",
+			Name:          "Process Execution Artifacts",
+			Description:   "Detect attacker tool execution via Prefetch, BAM, and ShimCache artifacts (survives file deletion)",
+			Script:        "windows/process_execution.ps1",
+			Timeout:       30 * time.Second,
+			OutputFormat:  "json",
+			RequiresAdmin: true,
+		},
 	}
 }

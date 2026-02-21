@@ -1,0 +1,29 @@
+{
+  "collected_at": "2026-02-22T09:00:00Z",
+  "hostname": "WORKSTATION01",
+  "check": "process_execution",
+  "prefetch_files": [
+    {
+      "name": "NOTEPAD.EXE",
+      "last_run": "2026-02-21T15:00:00Z",
+      "created": "2025-10-01T08:00:00Z",
+      "size_bytes": 14784,
+      "attack_tool": false
+    },
+    {
+      "name": "CHROME.EXE",
+      "last_run": "2026-02-22T08:55:00Z",
+      "created": "2025-09-15T12:00:00Z",
+      "size_bytes": 58320,
+      "attack_tool": false
+    }
+  ],
+  "bam_entries": [],
+  "shimcache_entries": [
+    {
+      "note": "ShimCache present — binary parsing requires native tool (e.g. AppCompatCacheParser)",
+      "size_bytes": 73728
+    }
+  ],
+  "errors": []
+}

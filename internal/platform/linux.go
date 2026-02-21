@@ -7,8 +7,8 @@ func LinuxChecks() []Check {
 	return []Check{
 		{
 			ID:            "c2_connections",
-			Name:          "C2 통신 및 역방향 쉘 탐지",
-			Description:   "외부 C2 서버 통신, Reverse Shell, 의심 포트 리스닝 탐지",
+			Name:          "C2 Communication & Reverse Shell",
+			Description:   "Detect outbound C2 connections, reverse shells, and suspicious listening ports",
 			Script:        "linux/c2_connections.sh",
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",
@@ -16,8 +16,8 @@ func LinuxChecks() []Check {
 		},
 		{
 			ID:            "persistence",
-			Name:          "재부팅 후 생존 메커니즘 탐지",
-			Description:   "Cron 작업, systemd 비표준 서비스, rc.local을 통한 Persistence 탐지",
+			Name:          "Persistence Mechanisms",
+			Description:   "Detect persistence via cron jobs, non-standard systemd services, and rc.local",
 			Script:        "linux/persistence.sh",
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",
@@ -25,8 +25,8 @@ func LinuxChecks() []Check {
 		},
 		{
 			ID:            "log_tampering",
-			Name:          "로그 삭제/변조 흔적 탐지",
-			Description:   "로그 파일 크기 이상, 감사 데몬 비활성, 저널 무결성 검증",
+			Name:          "Log Tampering",
+			Description:   "Detect log file anomalies, disabled audit daemon, and journal integrity issues",
 			Script:        "linux/log_tampering.sh",
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",
@@ -34,8 +34,8 @@ func LinuxChecks() []Check {
 		},
 		{
 			ID:            "account_compromise",
-			Name:          "계정 탈취 및 조작 흔적",
-			Description:   "UID 0 계정, 비인가 SSH 키, 브루트포스, 최근 계정 파일 변경 탐지",
+			Name:          "Account Compromise",
+			Description:   "Detect UID 0 accounts, unauthorized SSH keys, brute-force, and recent account file changes",
 			Script:        "linux/account_compromise.sh",
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",
@@ -43,8 +43,8 @@ func LinuxChecks() []Check {
 		},
 		{
 			ID:            "credential_dump",
-			Name:          "크리덴셜 덤프 흔적 탐지",
-			Description:   "/etc/shadow 접근 권한, 크리덴셜 도구, 민감 파일 접근 탐지",
+			Name:          "Credential Dumping",
+			Description:   "Detect /etc/shadow access, credential tools, and sensitive file access",
 			Script:        "linux/credential_dump.sh",
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",
@@ -52,8 +52,8 @@ func LinuxChecks() []Check {
 		},
 		{
 			ID:            "fileless_attack",
-			Name:          "파일리스 공격 탐지",
-			Description:   "삭제된 실행 파일 프로세스, /dev/shm 악용, memfd_create 탐지",
+			Name:          "Fileless Attack",
+			Description:   "Detect deleted-executable processes, /dev/shm abuse, and memfd_create usage",
 			Script:        "linux/fileless_attack.sh",
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",
@@ -61,8 +61,8 @@ func LinuxChecks() []Check {
 		},
 		{
 			ID:            "lolbin_abuse",
-			Name:          "GTFOBins 악용 탐지",
-			Description:   "curl, wget, python, nc 등 정상 도구의 악의적 사용 탐지",
+			Name:          "GTFOBins Abuse",
+			Description:   "Detect malicious use of legitimate tools: curl, wget, python, nc, etc.",
 			Script:        "linux/lolbin_abuse.sh",
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",
@@ -70,8 +70,8 @@ func LinuxChecks() []Check {
 		},
 		{
 			ID:            "lateral_movement",
-			Name:          "내부 이동 흔적 탐지",
-			Description:   "SSH 세션, 원격 로그인, SSH 터널링, 원격 실행 도구 탐지",
+			Name:          "Lateral Movement",
+			Description:   "Detect SSH sessions, remote logins, SSH tunneling, and remote execution tools",
 			Script:        "linux/lateral_movement.sh",
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",
@@ -79,8 +79,8 @@ func LinuxChecks() []Check {
 		},
 		{
 			ID:            "webshell",
-			Name:          "웹쉘 탐지",
-			Description:   "웹 서버 디렉토리 내 의심 스크립트, 웹쉘 패턴 매칭 탐지",
+			Name:          "Webshell Detection",
+			Description:   "Detect suspicious scripts in web server directories using webshell pattern matching",
 			Script:        "linux/webshell.sh",
 			Timeout:       30 * time.Second,
 			OutputFormat:  "json",

@@ -34,7 +34,7 @@ func (a *Aggregator) ShouldIsolate(findings []analyzer.Finding) IsolationRecomme
 		return IsolationRecommendation{
 			Isolate: true,
 			Urgency: "urgent",
-			Reason:  "복수의 침해 가능성 높은 항목 동시 발견",
+			Reason:  "Multiple high-confidence intrusion indicators found simultaneously",
 			Banner:  "red",
 		}
 	}
@@ -44,7 +44,7 @@ func (a *Aggregator) ShouldIsolate(findings []analyzer.Finding) IsolationRecomme
 		return IsolationRecommendation{
 			Isolate: false,
 			Urgency: "monitor",
-			Reason:  "침해 가능성 높은 항목 1건 발견 — 추가 조사 필요",
+			Reason:  "One high-confidence intrusion indicator found — further investigation required",
 			Banner:  "yellow",
 		}
 	}
@@ -55,7 +55,7 @@ func (a *Aggregator) ShouldIsolate(findings []analyzer.Finding) IsolationRecomme
 		return IsolationRecommendation{
 			Isolate: false,
 			Urgency: "monitor",
-			Reason:  "의심 항목 발견 — 모니터링 권장",
+			Reason:  "Suspicious indicators found — monitoring recommended",
 			Banner:  "yellow",
 		}
 	}
@@ -64,7 +64,7 @@ func (a *Aggregator) ShouldIsolate(findings []analyzer.Finding) IsolationRecomme
 	return IsolationRecommendation{
 		Isolate: false,
 		Urgency: "none",
-		Reason:  "침입 흔적 미발견",
+		Reason:  "No intrusion evidence found",
 		Banner:  "green",
 	}
 }

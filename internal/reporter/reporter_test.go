@@ -205,8 +205,8 @@ func TestGenerate_WithCollectionFailures(t *testing.T) {
 		Isolation:   IsolationRecommendation{Banner: "yellow", Urgency: "monitor"},
 		TotalChecks: 9,
 		CollectionFailures: []CollectionFailure{
-			{CheckID: "log_tampering", CheckName: "로그 삭제/변조 흔적 탐지", Error: "access denied", FailureKind: "permission_denied"},
-			{CheckID: "account_compromise", CheckName: "계정 탈취 및 조작 흔적", Error: "script timeout", FailureKind: "timeout"},
+			{CheckID: "log_tampering", CheckName: "Log Tampering", Error: "access denied", FailureKind: "permission_denied"},
+			{CheckID: "account_compromise", CheckName: "Account Compromise", Error: "script timeout", FailureKind: "timeout"},
 		},
 		CollectionDuration: "5s",
 		AnalysisDuration:   "10s",

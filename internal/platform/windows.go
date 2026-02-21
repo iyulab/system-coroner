@@ -113,5 +113,14 @@ func WindowsChecks() []Check {
 			OutputFormat:  "json",
 			RequiresAdmin: false,
 		},
+		{
+			ID:            "file_download",
+			Name:          "File Download Artifacts",
+			Description:   "Detect externally downloaded tools via Zone.Identifier (Mark-of-the-Web) and BITS transfers",
+			Script:        "windows/file_download.ps1",
+			Timeout:       30 * time.Second,
+			OutputFormat:  "json",
+			RequiresAdmin: false,
+		},
 	}
 }

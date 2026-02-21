@@ -1,0 +1,61 @@
+{
+  "collected_at": "2026-02-22T03:30:00Z",
+  "hostname": "DC01",
+  "check": "file_download",
+  "zone_marked_files": [
+    {
+      "file_name": "mimikatz.exe",
+      "file_path": "C:\\Users\\jsmith\\AppData\\Local\\Temp\\mimikatz.exe",
+      "extension": ".exe",
+      "zone_id": 3,
+      "host_url": "http://185.220.101.42/tools/mimikatz.exe",
+      "referrer": "",
+      "created": "2026-02-22T02:40:00Z",
+      "modified": "2026-02-22T02:40:00Z",
+      "size_bytes": 1298432,
+      "is_exec": true,
+      "in_temp": true,
+      "risk": "high"
+    },
+    {
+      "file_name": "SharpHound.exe",
+      "file_path": "C:\\Users\\jsmith\\AppData\\Local\\Temp\\SharpHound.exe",
+      "extension": ".exe",
+      "zone_id": 3,
+      "host_url": "http://attacker.xyz/SharpHound.exe",
+      "referrer": "",
+      "created": "2026-02-22T02:52:00Z",
+      "modified": "2026-02-22T02:52:00Z",
+      "size_bytes": 982016,
+      "is_exec": true,
+      "in_temp": true,
+      "risk": "high"
+    },
+    {
+      "file_name": "payload.ps1",
+      "file_path": "C:\\Users\\Public\\payload.ps1",
+      "extension": ".ps1",
+      "zone_id": 3,
+      "host_url": "http://attacker.xyz/stager.ps1",
+      "referrer": "",
+      "created": "2026-02-22T01:00:00Z",
+      "modified": "2026-02-22T01:00:00Z",
+      "size_bytes": 4096,
+      "is_exec": true,
+      "in_temp": true,
+      "risk": "high"
+    }
+  ],
+  "recent_executables": [],
+  "bits_transfers": [
+    {
+      "display_name": "BITS Job",
+      "file_url": "http://attacker.xyz/loader.dll",
+      "local_name": "C:\\ProgramData\\loader.dll",
+      "state": "Transferred",
+      "created": "2026-02-22T00:30:00Z",
+      "bytes_total": 327680
+    }
+  ],
+  "errors": []
+}

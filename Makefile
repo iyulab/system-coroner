@@ -1,9 +1,9 @@
-.PHONY: build build-all test lint clean fmt vet check
+.PHONY: build build-all test lint clean fmt vet check release
 
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
-DATE    ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
-LDFLAGS  = -ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
+VERSION  := $(shell cat VERSION)
+COMMIT   ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+DATE     ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
+LDFLAGS   = -ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
 
 build:
 	go build $(LDFLAGS) -trimpath -o coroner ./cmd/coroner
@@ -27,13 +27,12 @@ fmt:
 lint:
 	golangci-lint run
 
-# Run all checks: vet, format verification, tests
 check: vet
-	@unformatted=$$(gofmt -l .); \
-	if [ -n "$$unformatted" ]; then \
-		echo "Unformatted files:"; echo "$$unformatted"; exit 1; \
-	fi
+	@unformatted=$$(gofmt -l .); \n	if [ -n "$$unformatted" ]; then \n		echo "Unformatted files:"; echo "$$unformatted"; exit 1; \n	fi
 	go test ./... -count=1
+
+release:
+	@version=$$(cat VERSION); \n	echo "Releasing v$$version..."; \n	git tag -a "v$$version" -m "Release v$$version"; \n	git push origin "v$$version"; \n	echo "Tag v$$version pushed. GitHub Actions will build and publish the release."
 
 clean:
 	rm -f coroner coroner.exe

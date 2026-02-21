@@ -35,6 +35,11 @@ Webshell detection     Credential dumping          Registry Run keys
 | `credential_dump` | `scripts/windows/credential_dump.ps1` | Windows | T1003.001, T1003.002, T1003.003, T1552.002 | ✅ |
 | `lateral_movement` | `scripts/windows/lateral_movement.ps1` | Windows | T1021.001, T1021.002, T1021.006, T1570, T1135 | ✅ |
 | `webshell` | `scripts/windows/webshell.ps1` | Windows | T1505.003, T1190, T1036.005 | ✅ |
+| `discovery_recon` | `scripts/windows/discovery_recon.ps1` | Windows | T1046, T1082, T1083, T1087, T1069 | ✅ |
+| `process_execution` | `scripts/windows/process_execution.ps1` | Windows | T1059, T1204, T1218 | ✅ |
+| `file_access` | `scripts/windows/file_access.ps1` | Windows | T1083, T1552, T1005 | ✅ |
+| `file_download` | `scripts/windows/file_download.ps1` | Windows | T1105, T1140, T1608 | ✅ |
+| `staging_exfiltration` | `scripts/windows/staging_exfiltration.ps1` | Windows | T1074, T1560, T1048, T1052 | ✅ |
 | `c2_connections` | `scripts/linux/c2_connections.sh` | Linux | T1071.001, T1071.004, T1048.003, T1095, T1090 | ✅ |
 | `persistence` | `scripts/linux/persistence.sh` | Linux | T1053.003, T1543.002, T1037.004, T1574.006, T1546.004 | ✅ |
 | `log_tampering` | `scripts/linux/log_tampering.sh` | Linux | T1070.001, T1070.002, T1562.001 | ✅ |
@@ -44,8 +49,10 @@ Webshell detection     Credential dumping          Registry Run keys
 | `lolbin_abuse` | `scripts/linux/lolbin_abuse.sh` | Linux | T1059.004, T1105, T1218 | ✅ |
 | `lateral_movement` | `scripts/linux/lateral_movement.sh` | Linux | T1021.004, T1572, T1563.001 | ✅ |
 | `webshell` | `scripts/linux/webshell.sh` | Linux | T1505.003, T1190 | ✅ |
+| `discovery_recon` | `scripts/linux/discovery_recon.sh` | Linux | T1046, T1082, T1083, T1087 | ✅ |
+| `staging_exfiltration` | `scripts/linux/staging_exfiltration.sh` | Linux | T1074, T1560, T1048 | ✅ |
 
-Test fixtures: `tests/fixtures/{platform}/{clean,compromised}/{check_id}.json` (9 × 2 per platform)
+Test fixtures: `tests/fixtures/{platform}/{clean,compromised}/{check_id}.json`
 
 ---
 
@@ -299,14 +306,35 @@ Only runs if a web server is detected (IIS, Apache, nginx, Tomcat — auto-detec
 
 ---
 
+## Rule-Based Scoring (Stage 2 Filter)
+
+Before LLM analysis, `internal/analyzer/filter.go` applies deterministic rules to each collected item:
+
+| Rule | Check | Score | Trigger |
+|------|-------|-------|---------|
+| `KnownAttackTool` | process_execution | 100 | mimikatz/procdump/bloodhound/meterpreter etc. |
+| `TempPathExec` | process_execution | 80 | Executable in `\Temp\`, `\Users\Public\`, `\PerfLogs\` |
+| `SensitiveFileLNK` | file_access | 90 | LNK target = SAM/NTDS.dit/.pfx/id_rsa/credentials |
+| `ZoneId3Executable` | file_download | 85 | Zone.Id=3 + exec extension + staging path |
+| `VssDeletion` | staging_exfiltration | 90 | `vssadmin delete shadows` / `wmic shadowcopy delete` |
+| `TempArchive` | staging_exfiltration | 65 | Archive (.zip/.7z) in Temp/Public directory |
+| `ExfilTool` | staging_exfiltration | 75 | rclone/WinSCP/filezilla in Prefetch |
+| `BloodHoundPattern` | discovery_recon | 100 | SharpHound.exe or `-CollectionMethod All` |
+| `ReconCommand` | discovery_recon | 60 | nltest /domain_trusts, net group "Domain Admins", whoami /all |
+
+SUSPICIOUS items are forwarded to the LLM with `rule_flags` annotation for confirmation/refutation.
+SAFE items (Windows paths, known-good domains) are excluded before LLM to reduce token usage.
+
 ## Planned Additions (Windows)
 
 - `ransomware_indicators` — ransomware activity patterns (VSS deletion, mass file modification)
-- `data_exfiltration` — large-volume external data transfer evidence
 - `defense_evasion` — AV/EDR disabling, process hiding detection
 - `supply_chain` — software update compromise traces
 
 ## Planned Additions (Linux)
 
-- `rootkit_indicators` — hidden processes/files, LD_PRELOAD manipulation, kernel module verification
+- `process_execution` — bash_history + /proc based execution evidence
+- `file_access` — auditd OPEN/READ events for sensitive files
+- `file_download` — wget/curl download artifacts
+- `rootkit_indicators` — hidden processes/files, LD_PRELOAD manipulation
 - `suid_abuse` — SUID binary manipulation, capabilities abuse

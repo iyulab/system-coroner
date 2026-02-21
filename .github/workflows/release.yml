@@ -28,18 +28,26 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Release tag: $TAG"
 
-      - name: Create tag if not exists (manual trigger)
+      - name: Point tag to current HEAD (manual trigger)
         if: github.event_name == 'workflow_dispatch'
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
-          if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
-            echo "Tag $TAG already exists, proceeding with existing tag"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag -a "$TAG" -m "Release $TAG"
+          CURRENT_HEAD=$(git rev-parse HEAD)
+          TAG_COMMIT=$(git rev-list -n 1 "$TAG" 2>/dev/null || echo "")
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -z "$TAG_COMMIT" ]; then
+            git tag -a "$TAG" -m "Release $TAG" HEAD
             git push origin "$TAG"
-            echo "Created and pushed tag $TAG"
+            echo "Created tag $TAG at HEAD ($CURRENT_HEAD)"
+          elif [ "$TAG_COMMIT" != "$CURRENT_HEAD" ]; then
+            git push origin ":refs/tags/$TAG"
+            git tag -d "$TAG" 2>/dev/null || true
+            git tag -a "$TAG" -m "Release $TAG" HEAD
+            git push origin "$TAG"
+            echo "Moved tag $TAG: $TAG_COMMIT → $CURRENT_HEAD"
+          else
+            echo "Tag $TAG already at HEAD, no change needed"
           fi
 
       - name: Set up Go

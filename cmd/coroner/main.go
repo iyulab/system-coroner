@@ -36,6 +36,7 @@ LLM이 이를 분석한 뒤 단일 report.html을 생성합니다.
 	rootCmd.Flags().Bool("skip-collect", false, "수집 건너뛰기 (--fixture와 조합)")
 	rootCmd.Flags().BoolP("verbose", "v", false, "상세 로그 출력")
 	rootCmd.Version = fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date)
+	rootCmd.AddCommand(newUpdateCmd(version))
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

@@ -1,10 +1,45 @@
 {
-  "cleared_logs": [],
-  "audit_policy_changes": [],
+  "collected_at": "2024-01-14T10:00:00Z",
+  "hostname": "CLEAN-PC",
+  "check": "log_tampering",
+  "log_cleared_events": [],
+  "audit_changes": [],
   "log_sizes": [
-    {"log": "Security", "size_mb": 14.8, "max_size_mb": 20, "note": "normal"},
-    {"log": "System", "size_mb": 12.3, "max_size_mb": 20, "note": "normal"},
-    {"log": "Application", "size_mb": 9.1, "max_size_mb": 20, "note": "normal"}
+    {
+      "name": "Security",
+      "file_size_mb": 14.8,
+      "max_size_mb": 20.0,
+      "fill_percent": 74.0,
+      "log_mode": "Circular",
+      "record_count": 35000,
+      "is_enabled": true,
+      "last_write": "2024-01-14T09:59:00Z"
+    },
+    {
+      "name": "System",
+      "file_size_mb": 12.3,
+      "max_size_mb": 20.0,
+      "fill_percent": 61.5,
+      "log_mode": "Circular",
+      "record_count": 28000,
+      "is_enabled": true,
+      "last_write": "2024-01-14T09:58:00Z"
+    },
+    {
+      "name": "Application",
+      "file_size_mb": 9.1,
+      "max_size_mb": 20.0,
+      "fill_percent": 45.5,
+      "log_mode": "Circular",
+      "record_count": 20000,
+      "is_enabled": true,
+      "last_write": "2024-01-14T09:57:00Z"
+    }
   ],
-  "eventlog_service": {"status": "Running", "start_type": "Automatic"}
+  "eventlog_service": {
+    "name": "EventLog",
+    "status": "Running",
+    "start_type": "Automatic"
+  },
+  "errors": []
 }

@@ -201,6 +201,88 @@ func TestDetectLogCapacityWarnings_MultipleConditions(t *testing.T) {
 	}
 }
 
+// TestDetectLogCapacityWarnings_RealScriptOutput tests with the exact JSON
+// structure produced by scripts/windows/log_tampering.ps1 — including extra
+// fields like collected_at, hostname, last_write that the parser must tolerate.
+// Reproduces the D6DQSB24 scenario: all logs Circular + 100% full.
+func TestDetectLogCapacityWarnings_RealScriptOutput(t *testing.T) {
+	// This is the full script output format, not just {log_sizes:[...]}.
+	rawJSON := `{
+		"collected_at": "2024-01-14T04:05:00Z",
+		"hostname": "D6DQSB24",
+		"check": "log_tampering",
+		"log_cleared_events": [],
+		"audit_changes": [],
+		"log_sizes": [
+			{
+				"name": "Security",
+				"file_size_mb": 20.0,
+				"max_size_mb": 20.0,
+				"fill_percent": 100.0,
+				"log_mode": "Circular",
+				"record_count": 62000,
+				"is_enabled": true,
+				"last_write": "2024-01-14T04:04:59Z"
+			},
+			{
+				"name": "System",
+				"file_size_mb": 20.0,
+				"max_size_mb": 20.0,
+				"fill_percent": 100.0,
+				"log_mode": "Circular",
+				"record_count": 45000,
+				"is_enabled": true,
+				"last_write": "2024-01-14T04:04:58Z"
+			},
+			{
+				"name": "Application",
+				"file_size_mb": 20.0,
+				"max_size_mb": 20.0,
+				"fill_percent": 100.0,
+				"log_mode": "Circular",
+				"record_count": 38000,
+				"is_enabled": true,
+				"last_write": "2024-01-14T04:04:57Z"
+			},
+			{
+				"name": "Microsoft-Windows-PowerShell/Operational",
+				"file_size_mb": 15.0,
+				"max_size_mb": 15.0,
+				"fill_percent": 100.0,
+				"log_mode": "Circular",
+				"record_count": 12000,
+				"is_enabled": true,
+				"last_write": "2024-01-14T04:04:56Z"
+			}
+		],
+		"eventlog_service": {"name": "EventLog", "status": "Running", "start_type": "Automatic"},
+		"errors": []
+	}`
+
+	warnings := DetectLogCapacityWarnings(map[string]string{"log_tampering": rawJSON})
+	if len(warnings) != 4 {
+		t.Fatalf("expected 4 warnings (all logs Circular+100%%), got %d", len(warnings))
+	}
+	for i, w := range warnings {
+		if w.Severity != "high" {
+			t.Errorf("warning[%d] %s: expected severity high, got %s", i, w.LogName, w.Severity)
+		}
+		if w.FillPercent != 100.0 {
+			t.Errorf("warning[%d] %s: expected fill_percent 100, got %f", i, w.LogName, w.FillPercent)
+		}
+		if w.LogMode != "Circular" {
+			t.Errorf("warning[%d] %s: expected log_mode Circular, got %s", i, w.LogName, w.LogMode)
+		}
+	}
+	// Verify log names in order
+	expectedNames := []string{"Security", "System", "Application", "Microsoft-Windows-PowerShell/Operational"}
+	for i, name := range expectedNames {
+		if warnings[i].LogName != name {
+			t.Errorf("warning[%d]: expected name %s, got %s", i, name, warnings[i].LogName)
+		}
+	}
+}
+
 func TestDetectLogCapacityWarnings_RetainMode(t *testing.T) {
 	// Retain mode at 95% fill should NOT trigger (only Circular triggers)
 	data := map[string]interface{}{

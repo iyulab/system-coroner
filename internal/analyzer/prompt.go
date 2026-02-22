@@ -156,6 +156,8 @@ ANALYSIS TARGETS:
 4. System processes (svchost, lsass, services) connecting externally
 5. Long-duration connections (>30 min) to single IP
 6. DNS cache entries with DGA-like domain names (high entropy, long subdomains)
+7. Service installations (Event 7045): PSEXESVC, services from Temp/AppData paths, services with generic names running as LocalSystem, base64 or encoded commands in ImagePath
+8. Correlate service installation timestamps with external connections — a service installed shortly before C2 traffic begins is a strong persistence indicator
 
 DATA:
 %s`,
@@ -269,6 +271,87 @@ ANALYSIS TARGETS:
 4. IIS log anomalies: POST requests to static file extensions (.jpg, .css, .txt)
 5. Directory traversal attempts in IIS logs (../ or %%2e%%2e)
 6. Creation timestamp much newer than other files (uploaded vs deployed)
+
+DATA:
+%s`,
+
+	"discovery_recon": `Analyze the following reconnaissance and discovery data from server %s for attacker enumeration activity.
+
+ANALYSIS TARGETS:
+1. Network/domain enumeration commands: net group, net user, nltest, dsquery, whoami /all
+2. Account and privilege discovery: net localgroup Administrators, net accounts
+3. Offensive tool execution: SharpHound, BloodHound, nmap, masscan, Advanced IP Scanner
+4. Process ancestry: legitimate admin tools (SCCM, SCOM) vs. interactive discovery sessions
+5. Temporal clustering: multiple recon commands within a short window (attacker enumeration burst)
+6. RDP connection history (rdp_mru): internal hosts accessed via RDP from this server (pivot indicator)
+7. Recon commands run under service accounts or SYSTEM (indicates post-exploitation, not admin)
+8. Parent process context: cmd.exe/powershell.exe spawned by unexpected parents (web server, service)
+
+DATA:
+%s`,
+
+	"process_execution": `Analyze the following process execution evidence from server %s for malicious tool usage.
+
+Data includes Prefetch files (evidence of execution even after binary deletion) and BAM (Background Activity Moderator) entries.
+
+ANALYSIS TARGETS:
+1. Known attack tools in Prefetch: mimikatz, psexec, rubeus, cobalt strike, meterpreter, procdump, sharphound, lazagne
+2. Executables from suspicious paths: Temp, Downloads, ProgramData, AppData, Users\Public, PerfLogs
+3. BAM entries showing per-user execution history — correlate user SID with privilege level
+4. LOLBin proxy execution patterns: rundll32, regsvr32, msiexec with unusual arguments
+5. Timeline analysis: when were attack tools first executed (Prefetch created) vs. last run
+6. Pre-tagged attack_tool=true items are high-confidence — focus analysis on confirming context
+7. Tools executed by multiple user SIDs (indicates credential compromise and lateral tool deployment)
+8. ShimCache entries complement Prefetch — note binary presence even without execution proof
+
+DATA:
+%s`,
+
+	"file_access": `Analyze the following file access data from server %s for evidence of sensitive data reconnaissance and credential harvesting.
+
+Data includes Recent Items (.lnk shortcut) analysis showing which files were accessed.
+
+ANALYSIS TARGETS:
+1. Access to credential stores: SAM, SECURITY, SYSTEM hives, NTDS.dit (AD database)
+2. Private key access: .pfx, .pem, .key, id_rsa, id_ed25519 files
+3. Password manager databases: KeePass (.kdbx), browser credential stores (Login Data, logins.json)
+4. Configuration files containing credentials: web.config, .env, connection strings
+5. Pre-tagged is_sensitive=true items are high-priority — confirm whether access was administrative or malicious
+6. Timeline: cluster of sensitive file accesses in short window indicates systematic credential harvesting
+7. Accessed files in sensitive_lnk vs. general recent_items — sensitive access density ratio
+8. Correlate accessed files with staging/exfiltration evidence from other checks
+
+DATA:
+%s`,
+
+	"file_download": `Analyze the following file download evidence from server %s for attacker tool staging indicators.
+
+Data includes Zone.Identifier (ADS) marks showing internet-downloaded files and BITS transfer history.
+
+ANALYSIS TARGETS:
+1. Zone.Id=3 (Internet) or Zone.Id=4 (Restricted) files with executable extensions (.exe, .dll, .ps1, .bat, .vbs, .hta)
+2. Downloads landing in staging directories: Temp, Users\Public, ProgramData, PerfLogs
+3. host_url and referrer fields revealing download source — suspicious if unknown domain or raw IP
+4. Pre-tagged risk levels: critical/high items need confirmation, medium items need context
+5. BITS transfers: legitimate Windows Update vs. attacker using BITS for stealthy download
+6. Timeline: download timestamps relative to execution evidence and C2 establishment
+7. Multiple executables downloaded from same host = tool deployment campaign
+8. Large file downloads to staging paths followed by archive creation = data staging
+
+DATA:
+%s`,
+
+	"staging_exfiltration": `Analyze the following data staging and exfiltration evidence from server %s.
+
+ANALYSIS TARGETS:
+1. Archive files (.zip, .7z, .rar, .tar) in Temp, ProgramData, Users\Public — attackers stage data before exfil
+2. Volume Shadow Copy (VSS) deletion: vssadmin delete shadows, wmic shadowcopy delete — ransomware and cover-up indicator
+3. Exfiltration tools in Prefetch: rclone, WinSCP, pscp, FileZilla, FTP clients — evidence of data transfer
+4. USB device connection history: removable storage used for physical exfiltration
+5. Timeline correlation: archive created → exfil tool executed → USB connected = exfiltration chain
+6. Archive size relative to sensitive file access evidence — large archives after credential harvesting suggest bulk theft
+7. VSS deletion by non-backup processes or outside maintenance windows is highly suspicious
+8. SRUM note: process handle counts may indicate network-heavy processes if SRUM data unavailable
 
 DATA:
 %s`,
@@ -422,6 +505,38 @@ ANALYSIS TARGETS:
 6. Files with creation timestamp significantly different from deployment
 7. Hidden files (dot-prefix) in web-accessible directories
 8. World-writable directories under web root
+
+DATA:
+%s`,
+
+	"discovery_recon": `Analyze the following reconnaissance data from Linux server %s for attacker enumeration activity.
+
+Data is extracted from bash_history and process logs.
+
+ANALYSIS TARGETS:
+1. System enumeration commands: id, whoami, uname -a, cat /etc/passwd, hostname, hostnamectl
+2. Network discovery: ss, netstat, ip addr, arp, nmap, masscan, ping sweep patterns
+3. Privilege escalation recon: find / -perm -4000 (SUID search), sudo -l, cat /etc/sudoers
+4. Credential file discovery: find -name "*.conf", find -name "*.key", find -name "*.pem"
+5. Offensive tools: linpeas, LinEnum, lse.sh, pspy, BloodHound ingestors
+6. Temporal clustering: multiple recon commands in rapid succession = enumeration burst
+7. Process enumeration: ps aux, ps -ef, lastlog, last — used to map running services
+8. Commands run by non-root users searching for escalation vectors vs root running recon
+
+DATA:
+%s`,
+
+	"staging_exfiltration": `Analyze the following data staging and exfiltration evidence from Linux server %s.
+
+ANALYSIS TARGETS:
+1. Archive files in /tmp, /dev/shm, /var/tmp — attackers stage data in world-writable directories
+2. Exfiltration commands in bash history: rclone, curl -T, wget --post-file, scp, rsync to external hosts
+3. Data streaming patterns: tar | nc, tar | ssh, gzip | nc — real-time piped exfiltration
+4. nc (netcat) or socat listeners — data exfil channels or reverse shell setup
+5. USB/storage mount events from syslog (exclude Bluetooth and input devices)
+6. Timeline correlation: archive creation → exfil command → cleanup
+7. Large archive sizes relative to the type of files being collected = bulk theft
+8. Commands targeting sensitive directories: /etc, /home, database data directories
 
 DATA:
 %s`,

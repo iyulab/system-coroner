@@ -17,5 +17,23 @@
   ],
   "suspicious_listeners": [
     {"address": "0.0.0.0", "port": 4444, "process_name": "cmd.exe", "process_id": 8812}
+  ],
+  "service_installs": [
+    {
+      "time": "2026-02-20T03:14:22.0000000+09:00",
+      "service_name": "PSEXESVC",
+      "image_path": "%SystemRoot%\\PSEXESVC.exe",
+      "service_type": "user mode service",
+      "start_type": "demand start",
+      "account": "LocalSystem"
+    },
+    {
+      "time": "2026-02-20T03:18:45.0000000+09:00",
+      "service_name": "WindowsUpdateSvc",
+      "image_path": "C:\\Windows\\Temp\\svchost.exe",
+      "service_type": "user mode service",
+      "start_type": "auto start",
+      "account": "LocalSystem"
+    }
   ]
 }

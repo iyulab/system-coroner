@@ -144,6 +144,11 @@ func TestGenerate_WithFindings(t *testing.T) {
 		"T1071",
 		"1.2.3.4",
 		"Block 1.2.3.4",
+		// RP-008 Scoring Matrix
+		"Scoring Matrix",
+		"s-scoring",
+		"matrix-table",
+		"Active C2 communication confirmed", // ReasoningChain.Conclusion in matrix
 	}
 	for _, check := range checks {
 		if !strings.Contains(html, check) {

@@ -27,5 +27,15 @@
     {"name": "login.microsoftonline.com", "type": "A", "data": "20.190.160.14"},
     {"name": "www.microsoft.com", "type": "A", "data": "13.107.42.14"}
   ],
-  "suspicious_listeners": []
+  "suspicious_listeners": [],
+  "service_installs": [
+    {
+      "time": "2026-01-15T10:30:00.0000000+09:00",
+      "service_name": "MsMpSvc",
+      "image_path": "C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\4.18.2301.6-0\\MsMpEng.exe",
+      "service_type": "user mode service",
+      "start_type": "auto start",
+      "account": "LocalSystem"
+    }
+  ]
 }

@@ -55,6 +55,12 @@ type ReportData struct {
 	// Collection failures (script execution errors)
 	CollectionFailures []CollectionFailure `json:"collection_failures,omitempty"`
 
+	// Evidence gap analysis (RP-007): forensic impact of each collection failure
+	EvidenceGaps []EvidenceGap `json:"evidence_gaps,omitempty"`
+
+	// Log capacity warnings (RP-009): event log capacity and evidence loss risk
+	LogCapacityWarnings []LogCapacityWarning `json:"log_capacity_warnings,omitempty"`
+
 	// RawCheckData holds the raw collected JSON for each check (keyed by check ID).
 	// Used by the raw evidence JSON viewer (UI-007).
 	RawCheckData map[string]string `json:"raw_check_data,omitempty"`

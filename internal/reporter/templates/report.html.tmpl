@@ -123,6 +123,15 @@ th{background:rgba(255,255,255,.04);font-weight:600;font-size:.78em;text-transfo
 td{font-family:monospace;font-size:.84em;}
 tr:last-child td{border-bottom:none;}
 
+/* ── Scoring Matrix ── */
+.matrix-table{border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.matrix-table th{background:rgba(255,255,255,.06);}
+.matrix-table td{font-family:inherit;font-size:.85em;}
+.matrix-table code{font-size:.9em;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px;}
+.matrix-row{cursor:pointer;transition:background .15s;}
+.matrix-row:hover{background:rgba(88,166,255,.08);}
+.matrix-conclusion{max-width:400px;font-size:.82em;color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
 /* ── Details / inner collapsibles ── */
 details{margin-top:10px;}
 details summary{cursor:pointer;color:var(--blue);font-size:.87em;padding:3px 0;list-style:none;display:flex;align-items:center;gap:4px;}
@@ -219,6 +228,21 @@ details summary:hover{text-decoration:underline;}
 </div>
 {{end}}
 
+<!-- RP-009: Log Capacity Warnings -->
+{{if .LogCapacityWarnings}}
+<div style="margin-bottom:14px;">
+  {{range .LogCapacityWarnings}}
+  <div style="background:{{if eq .Severity "high"}}var(--red-bg);border:1px solid var(--red){{else}}var(--yellow-bg);border:1px solid var(--yellow){{end}};border-radius:6px;padding:10px 16px;margin-bottom:6px;display:flex;align-items:center;gap:10px;">
+    <span style="font-size:1.1em;">{{if eq .Severity "high"}}&#9888;{{else}}&#9432;{{end}}</span>
+    <div>
+      <strong style="font-size:.82em;color:{{if eq .Severity "high"}}var(--red){{else}}var(--yellow){{end}};">Log Capacity Warning</strong>
+      <p style="font-size:.85em;opacity:.9;margin-top:2px;">{{.Warning}}</p>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
 <!-- Summary Stats -->
 <div id="s-summary" class="summary" style="scroll-margin-top:calc(var(--topbar-h) + 10px)">
   <div class="stat-card">
@@ -291,6 +315,43 @@ details summary:hover{text-decoration:underline;}
   </div>
 </section>
 {{end}}{{end}}
+
+<!-- Scoring Matrix -->
+{{if .Findings}}
+<section class="report-section" id="s-scoring">
+  <div class="sec-hdr is-open" onclick="toggleSec('scoring')">
+    <h2>Scoring Matrix</h2>
+    <div class="hdr-right">
+      <button class="btn" onclick="event.stopPropagation();copySection('scoring',this)">Copy</button>
+      <span class="chevron" id="chev-scoring">▾</span>
+    </div>
+  </div>
+  <div class="sec-body" id="body-scoring">
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>Check</th>
+          <th>Title</th>
+          <th>Confidence</th>
+          <th>Risk</th>
+          <th>Conclusion</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Findings}}
+        <tr class="matrix-row" onclick="document.getElementById('f-{{.Check}}').scrollIntoView({behavior:'smooth',block:'start'})">
+          <td><code>{{.Check}}</code></td>
+          <td>{{.Title}}</td>
+          <td><span class="badge {{confidenceClass .IntrusionConfidence}}">{{.IntrusionConfidence}}</span></td>
+          <td><span class="badge {{riskClass .RiskLevel}}">{{.RiskLevel}}</span></td>
+          <td class="matrix-conclusion">{{.ReasoningChain.Conclusion}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{end}}
 
 <!-- Findings -->
 {{if .Findings}}
@@ -467,17 +528,21 @@ details summary:hover{text-decoration:underline;}
 </section>
 {{end}}{{end}}
 
-<!-- Collection Failures -->
+<!-- Collection Failures + Evidence Gap Analysis (RP-007) -->
 {{if .CollectionFailures}}
 <section class="report-section" id="s-failures">
   <div class="sec-hdr" onclick="toggleSec('failures')">
-    <h2>Collection Failures</h2>
+    <h2>Collection Failures &amp; Evidence Gaps</h2>
     <div class="hdr-right">
+      <span class="badge risk-high">{{len .CollectionFailures}} gaps</span>
       <span class="chevron closed" id="chev-failures">▾</span>
     </div>
   </div>
   <div class="sec-body hidden" id="body-failures">
-    <p style="margin-bottom:12px;opacity:.7;font-size:.88em">The following checks failed to collect data. Analysis accuracy may be reduced for these areas.</p>
+    <div style="background:var(--yellow-bg);border:1px solid var(--yellow);border-radius:6px;padding:12px 16px;margin-bottom:16px;">
+      <strong style="color:var(--yellow);">Evidence Gap Warning</strong>
+      <p style="margin-top:4px;font-size:.88em;opacity:.85;">{{len .CollectionFailures}} check(s) failed to collect data. The conclusions in this report may be incomplete — attack activity in the blind spots listed below would NOT be detected.</p>
+    </div>
     <table>
       <thead><tr><th>Check</th><th>ID</th><th>Kind</th><th>Error</th></tr></thead>
       <tbody>
@@ -491,6 +556,23 @@ details summary:hover{text-decoration:underline;}
         {{end}}
       </tbody>
     </table>
+    {{if .EvidenceGaps}}
+    <h3 style="margin-top:20px;margin-bottom:10px;font-size:.95em;color:var(--yellow);">Forensic Impact Analysis</h3>
+    {{range .EvidenceGaps}}
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin-bottom:10px;{{if eq .ImpactSeverity "high"}}border-left:3px solid var(--red);{{else}}border-left:3px solid var(--yellow);{{end}}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <strong style="font-size:.9em;">{{.CheckName}}</strong>
+        <span class="badge {{if eq .ImpactSeverity "high"}}risk-high{{else}}risk-medium{{end}}">{{.ImpactSeverity}} impact</span>
+      </div>
+      <div class="field-lbl">Missing Data</div>
+      <p style="font-size:.85em;margin-bottom:4px;">{{.MissingData}}</p>
+      <div class="field-lbl">Blind Spots</div>
+      <p style="font-size:.85em;margin-bottom:4px;">{{.BlindSpots}}</p>
+      <div class="field-lbl">Impact on Assessment</div>
+      <p style="font-size:.85em;color:var(--fg);">{{.Impact}}</p>
+    </div>
+    {{end}}
+    {{end}}
   </div>
 </section>
 {{end}}
@@ -534,6 +616,7 @@ details summary:hover{text-decoration:underline;}
   <div class="toc-title">Navigation</div>
   <a class="toc-link" data-target="s-banner">Status</a>
   {{if .Findings}}
+  <a class="toc-link" data-target="s-scoring">Scoring Matrix</a>
   <a class="toc-link" data-target="s-findings">Findings ({{len .Findings}})</a>
   {{range .Findings}}
   <a class="toc-link sub" data-target="f-{{.Check}}">{{.Check}}</a>
@@ -545,7 +628,7 @@ details summary:hover{text-decoration:underline;}
   {{if .IoCs}}<a class="toc-link" data-target="s-iocs">IoCs</a>{{end}}
   {{if .RawFindings}}<a class="toc-link" data-target="s-raw">Analysis Failures</a>{{end}}
   {{if .Verdict}}{{if .Verdict.DataGaps}}<a class="toc-link" data-target="s-gaps">Data Gaps</a>{{end}}{{end}}
-  {{if .CollectionFailures}}<div class="toc-sep"></div><a class="toc-link" data-target="s-failures">Failures</a>{{end}}
+  {{if .CollectionFailures}}<div class="toc-sep"></div><a class="toc-link" data-target="s-failures">Evidence Gaps ({{len .CollectionFailures}})</a>{{end}}
   {{if .EvidenceHashes}}<a class="toc-link" data-target="s-integrity">Integrity</a>{{end}}
 </nav>
 

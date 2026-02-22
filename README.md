@@ -60,11 +60,13 @@ sudo ./coroner --config config.toml
 ### CLI options
 
 ```bash
-./coroner --config config.toml                          # Full run (collect + LLM + report)
+./coroner --config config.toml                          # Full run (collect + LLM + report + serve)
 ./coroner --collect-only                                # Collect only, no LLM calls
 ./coroner --only c2_connections,log_tampering            # Run specific checks only
 ./coroner --fixture tests/fixtures/linux/clean/ --skip-collect  # Test LLM analysis with fixtures
 ./coroner --verbose                                     # Verbose output with per-check status
+./coroner --no-serve                                    # Disable interactive server after analysis (CI/scripted use)
+./coroner --port 9000                                   # Set interactive server port (default: 8742)
 ```
 
 ---
@@ -123,8 +125,7 @@ Exclusions → Path Exclusions
 |----------|--------|
 | Windows (amd64) | `coroner-windows-amd64.exe` |
 | Linux (amd64) | `coroner-linux-amd64` |
-| macOS (arm64) | `coroner-darwin-arm64` |
-| macOS (amd64) | `coroner-darwin-amd64` |
+| Linux (arm64) | `coroner-linux-arm64` |
 
 ```bash
 # Build from source
@@ -144,7 +145,7 @@ On first run: `cp config.example.toml config.toml`, then set your API key.
 # provider: "anthropic" | "openai" | "ollama" | "gpustack"
 provider = "anthropic"
 api_key  = "sk-ant-..."
-model    = "claude-opus-4-20250514"
+model    = "claude-sonnet-4-6"
 
 # Optional: override the default endpoint (proxies, local Anthropic-compatible servers)
 # endpoint = "http://localhost/v1"
@@ -157,17 +158,28 @@ dir          = "output"
 open_browser = true
 keep_raw     = true        # Preserve raw IoC files (always recommended for forensics)
 
+[baseline]
+# Declare known-good artifacts so they are not flagged as threats.
+# known_paths     = ["D:\\monitoring\\agent", "C:\\ops\\tools"]
+# known_accounts  = ["backup_svc", "monitoring_agent"]
+# known_processes = ["backup.exe", "agent.exe"]
+
 [checks]
 # All checks are enabled by default. Set false to disable individual ones.
-# c2_connections     = true
-# persistence        = true
-# log_tampering      = true
-# account_compromise = true
-# credential_dump    = true
-# fileless_attack    = true
-# lolbin_abuse       = true
-# lateral_movement   = true
-# webshell           = true
+# c2_connections        = true
+# persistence           = true
+# log_tampering         = true
+# account_compromise    = true
+# credential_dump       = true
+# fileless_attack       = true
+# lolbin_abuse          = true
+# lateral_movement      = true
+# webshell              = true
+# discovery_recon       = true
+# process_execution     = true
+# file_access           = true
+# file_download         = true
+# staging_exfiltration  = true
 ```
 
 ### LLM Providers
@@ -190,6 +202,9 @@ keep_raw     = true        # Preserve raw IoC files (always recommended for fore
 ### Summary stats
 Confirmed / High / Medium / Low / Clean counts at a glance.
 
+### Scoring Matrix
+Summary table of all findings: Check, Title, Confidence, Risk, and Conclusion for quick triage.
+
 ### Sigma Rule Matches
 Deterministic pre-detection results independent of LLM analysis. Sigma rules are embedded in the binary and evaluated against raw collected evidence before LLM calls.
 
@@ -210,6 +225,12 @@ Unified list of IPs, file hashes, processes, registry keys — exportable as CSV
 ### Collection failures
 Checks that failed to collect data, with `FailureKind` classification: `timeout`, `permission_denied`, `script_error`, `not_found`, `unknown`.
 
+### Evidence gap analysis
+Forensic impact analysis of collection failures — identifies which attack techniques become undetectable when specific checks fail to collect data.
+
+### Log capacity warnings
+Event log capacity and mode warnings — detects disabled logs, circular-mode logs near capacity (evidence overwrite risk), and recently cleared logs.
+
 ### Evidence integrity
 SHA-256 hashes for all collected files (chain-of-custody).
 
@@ -219,10 +240,12 @@ SHA-256 hashes for all collected files (chain-of-custody).
 
 | Level | Meaning | Example |
 |-------|---------|---------|
-| **Confirmed** | Intrusion certain | Active C2 connection, known malware hash, event log wipe |
-| **Likely** | High probability | Suspicious process + anomalous account + autorun simultaneously |
-| **Suspected** | Requires investigation | Multiple individually-explainable but suspicious items |
-| **Clean** | No intrusion evidence | All collected items within normal range |
+| **confirmed** | Intrusion certain | Active C2 connection, known malware hash, event log wipe |
+| **high** | Strong evidence of intrusion | Suspicious process + anomalous account + autorun simultaneously |
+| **medium** | Requires investigation | Multiple individually-explainable but suspicious items |
+| **low** | Weak indicators only | Single low-severity anomaly, likely benign |
+| **informational** | Notable but not suspicious | Unusual configuration, no threat evidence |
+| **clean** | No intrusion evidence | All collected items within normal range |
 
 ---
 
@@ -237,11 +260,15 @@ SHA-256 hashes for all collected files (chain-of-custody).
 
 ## Roadmap
 
-- [x] Windows Server — PowerShell-based intrusion detection (9 checks)
-- [x] Linux — Bash-based intrusion detection (9 checks)
+- [x] Windows Server — PowerShell-based intrusion detection (14 checks)
+- [x] Linux — Bash-based intrusion detection (11 checks)
 - [x] Sigma rule pre-detection engine (embedded rules, deterministic layer)
 - [x] Evidence package export (ZIP with chain-of-custody metadata)
 - [x] GPUStack provider (OpenAI-compatible local LLM)
+- [x] Stage 2 rule-based scoring engine (`internal/analyzer/filter.go`)
+- [x] Interactive serve mode with analyst feedback re-evaluation
+- [x] Scoring matrix in report
+- [x] Baseline configuration (known-good paths, accounts, processes)
 - [ ] macOS support
 - [ ] Delta report (compare against previous scan)
 - [ ] YARA rule integration

@@ -128,6 +128,35 @@ try {
         $result.errors += "listeners: $($_.Exception.Message)"
     }
 
+    # --- CHK-001: Event 7045 — Service installation (RAT/C2 persistence indicator) ---
+    try {
+        $svcInstalls = Get-WinEvent -FilterHashtable @{LogName='System'; Id=7045} -MaxEvents 50 -ErrorAction SilentlyContinue
+        if ($svcInstalls) {
+            $result | Add-Member -NotePropertyName "service_installs" -NotePropertyValue @(
+                $svcInstalls | ForEach-Object {
+                    $xml = [xml]$_.ToXml()
+                    $data = $xml.Event.EventData.Data
+                    $svcName  = ($data | Where-Object { $_.Name -eq "ServiceName" }).'#text'
+                    $imgPath  = ($data | Where-Object { $_.Name -eq "ImagePath" }).'#text'
+                    $svcType  = ($data | Where-Object { $_.Name -eq "ServiceType" }).'#text'
+                    $startType = ($data | Where-Object { $_.Name -eq "StartType" }).'#text'
+                    $account  = ($data | Where-Object { $_.Name -eq "AccountName" }).'#text'
+                    [PSCustomObject]@{
+                        time         = $_.TimeCreated.ToString("o")
+                        service_name = $svcName
+                        image_path   = $imgPath
+                        service_type = $svcType
+                        start_type   = $startType
+                        account      = $account
+                    }
+                }
+            )
+        }
+    }
+    catch {
+        $result.errors += "service_installs: $($_.Exception.Message)"
+    }
+
     # --- DNS client cache (potential DGA domains) ---
     try {
         $dnsCache = Get-DnsClientCache -ErrorAction SilentlyContinue |

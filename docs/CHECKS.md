@@ -85,14 +85,17 @@ Rules are embedded in `internal/sigma/rules/windows/` and evaluated via `github.
 - Non-HTTPS connections over port 443 (SSL tunneling disguise)
 - Processes repeatedly connecting to the same external IP (beacon pattern)
 - DNS query anomalies (DGA domains, abnormally long subdomains)
+- Event 7045 (service installation) — ServiceName, ImagePath, ServiceType, StartType, AccountName
 
 **LLM analysis focus:**
 - Are system processes (`svchost.exe`, `lsass.exe`) making external connections?
 - Is connection frequency regular (beacon signature — 30s, 60s intervals)?
 - Is the remote IP a known cloud/CDN, or unknown?
 - Is the connecting process running from an expected path?
+- Service installations (Event 7045): PSEXESVC, services from Temp/AppData paths, suspicious service types
+- Correlate service installation timestamps with external connections for C2→persistence timeline
 
-**MITRE:** T1071 (Application Layer Protocol), T1048 (Exfiltration Over C2), T1095 (Non-Standard Port)
+**MITRE:** T1071 (Application Layer Protocol), T1048 (Exfiltration Over C2), T1095 (Non-Standard Port), T1543.003 (Windows Service)
 
 ---
 
@@ -221,10 +224,17 @@ Log deletion is one of the strongest indicators that immediately elevates confid
 - Event ID 1102 (Security log cleared — administrator direct wipe)
 - Event ID 104 (System log cleared)
 - Current vs. maximum size of each event log (abnormally small = suspicious)
+- Log fill percentage and mode (Circular/Retain/AutoBackup) per log
 - Event log service state (stopped = suspicious)
 - Windows Defender log deletion or disabled state
 - Audit policy disabled (Event ID 4719)
 - Abnormal last-modified timestamps on log files (gaps)
+
+**Report-level analysis (RP-009 Log Capacity Warning):**
+- Disabled logs → high severity (no events being recorded)
+- Circular mode + ≥90% full → high severity (oldest events being overwritten, evidence loss)
+- <5% full with records → medium severity (recently cleared, cross-reference 1102/104)
+- Warnings displayed as banners in the HTML report
 
 **LLM analysis focus:**
 - Presence of 1102/104 events → immediately consider escalating to Confirmed
@@ -292,17 +302,177 @@ Only runs if a web server is detected (IIS, Apache, nginx, Tomcat — auto-detec
 
 ---
 
+### `discovery_recon` — Internal Reconnaissance Detection
+
+**Goal:** Detect attacker reconnaissance commands used to map the environment.
+
+**What is collected:**
+- Event 4688 (process creation) scanned for known recon command patterns (last 7 days)
+- `net user`, `net group`, `net localgroup`, `whoami /all`, `nltest`, `dsquery` command execution
+- `nmap`, `ipconfig`, `arp -a`, `route print`, `netstat` network reconnaissance
+- `BloodHound` / `SharpHound` execution traces (Active Directory mapping)
+- `systeminfo`, `wmic` system discovery commands
+- RDP MRU (Most Recently Used) connections from registry
+
+**LLM analysis focus:**
+- Cluster of recon commands executed within a short window (attacker reconnaissance phase)
+- BloodHound or SharpHound execution (almost always malicious in a non-pentest context)
+- Recon commands executed by unexpected accounts or from unusual paths
+- RDP MRU entries to internal servers not normally accessed by the account
+
+**MITRE:** T1046 (Network Service Scanning), T1082 (System Information Discovery), T1083 (File and Directory Discovery), T1087 (Account Discovery), T1069 (Permission Groups Discovery)
+
+---
+
+### `process_execution` — Process Execution Artifact Detection
+
+**Goal:** Detect attacker tool execution through forensic artifacts that survive file deletion.
+
+**What is collected:**
+- Prefetch files (`C:\Windows\Prefetch\*.pf`) — evidence of program execution even if the binary was deleted
+- BAM (Background Activity Moderator) entries — recent execution timestamps from registry
+- ShimCache (Application Compatibility Cache) entries — program execution history
+- Filtering of known-safe Windows system paths to reduce noise
+
+**LLM analysis focus:**
+- Known attack tools in Prefetch (mimikatz, procdump, bloodhound, meterpreter, etc.)
+- Executables run from Temp, Users\Public, PerfLogs paths (attacker staging locations)
+- Execution artifacts for binaries no longer present on disk (deleted after use)
+- BAM timestamps clustered during non-business hours
+
+**MITRE:** T1059 (Command and Scripting Interpreter), T1204 (User Execution), T1218 (System Binary Proxy Execution)
+
+---
+
+### `file_access` — File Access Artifact Detection
+
+**Goal:** Detect files and folders browsed by an attacker via Recent Items and LNK files.
+
+**What is collected:**
+- Recent Items (LNK files) from all user profiles — what files were opened
+- LNK target path analysis for sensitive file access:
+  - SAM, NTDS.dit, SYSTEM, SECURITY hives
+  - `.pfx`, `.pem`, `id_rsa` certificates and keys
+  - `credentials`, `password`, `secret` files
+- File access timestamps and target paths
+
+**LLM analysis focus:**
+- LNK files targeting SAM/NTDS.dit (credential extraction attempt)
+- Access to certificate/key files (.pfx, id_rsa) — potential key theft
+- Access patterns suggesting systematic exploration of sensitive directories
+- Recent Items from admin accounts showing unusual file access
+
+**MITRE:** T1083 (File and Directory Discovery), T1552 (Unsecured Credentials), T1005 (Data from Local System)
+
+---
+
+### `file_download` — File Download Artifact Detection
+
+**Goal:** Detect externally downloaded tools and payloads via Zone.Identifier and BITS transfers.
+
+**What is collected:**
+- Zone.Identifier (Mark-of-the-Web) alternate data streams on files in staging directories
+- Zone.Id=3 (Internet download) + executable extensions in Temp/Public paths
+- BITS (Background Intelligent Transfer Service) transfer history
+- Recently created executables in user-writable directories
+- Safe domain filtering (microsoft.com, windows.com, etc. excluded)
+
+**LLM analysis focus:**
+- Zone.Id=3 executables in staging paths (Temp, Users\Public) — externally downloaded tools
+- BITS transfers to/from unusual URLs (attacker tool delivery)
+- Downloaded executables with names mimicking legitimate tools
+- Download timestamps correlating with other attack indicators
+
+**MITRE:** T1105 (Ingress Tool Transfer), T1140 (Deobfuscate/Decode Files), T1608 (Stage Capabilities)
+
+---
+
+### `staging_exfiltration` — Data Staging and Exfiltration Detection
+
+**Goal:** Detect data staging artifacts: temp archives, USB devices, VSS deletion, and exfiltration tools.
+
+**What is collected:**
+- Archive files (.zip, .7z, .rar) in Temp and Public directories (data staging)
+- USB device connection history from registry (USBSTOR)
+- VSS (Volume Shadow Copy) deletion commands (`vssadmin delete shadows`, `wmic shadowcopy delete`)
+- Exfiltration tool traces in Prefetch (rclone, WinSCP, FileZilla, pscp)
+- SRUM (System Resource Usage Monitor) for processes with large network send volumes
+- Known-safe backup processes filtered out (Veeam, wbadmin, etc.)
+
+**LLM analysis focus:**
+- VSS deletion (strong ransomware/anti-forensics indicator)
+- Archives in Temp/Public created shortly before or during incident timeframe
+- Exfiltration tools (rclone, WinSCP) not normally present on the server
+- SRUM entries showing large data transfers by unusual processes
+- USB device connections during non-business hours
+
+**MITRE:** T1074 (Data Staged), T1560 (Archive Collected Data), T1048 (Exfiltration Over Alternative Protocol), T1052 (Exfiltration Over Physical Medium)
+
+---
+
+## Linux-specific Checks (additional)
+
+---
+
+### `discovery_recon` (Linux) — Internal Reconnaissance Detection
+
+**Goal:** Detect attacker reconnaissance commands from bash history and process list.
+
+**What is collected:**
+- Bash history entries from all user home directories + /root
+- Known recon command patterns: `id`, `whoami`, `uname -a`, `cat /etc/passwd`
+- Network reconnaissance: `nmap`, `netstat`, `ss`, `ip addr`, `arp`
+- BloodHound/LinPEAS/LinEnum execution traces
+- SUID file enumeration (`find / -perm -4000`)
+
+**LLM analysis focus:**
+- Cluster of recon commands in bash history indicating systematic reconnaissance
+- LinPEAS/LinEnum execution (privilege escalation enumeration tools)
+- SUID enumeration followed by exploitation attempts
+- Recon commands executed by service accounts (should not have interactive history)
+
+**MITRE:** T1046 (Network Service Scanning), T1082 (System Information Discovery), T1083 (File and Directory Discovery), T1087 (Account Discovery)
+
+---
+
+### `staging_exfiltration` (Linux) — Data Staging and Exfiltration Detection
+
+**Goal:** Detect data staging archives in /tmp//dev/shm, exfiltration commands, and USB events.
+
+**What is collected:**
+- Archive files in staging directories (/tmp, /dev/shm, /var/tmp)
+- Exfiltration commands in bash history: `rclone`, `nc`, `scp`, `rsync`, `curl --upload`
+- USB device connection events from dmesg/syslog
+- Large file creation in temporary directories
+
+**LLM analysis focus:**
+- Archives in /tmp or /dev/shm created during incident timeframe
+- Exfiltration tool commands (rclone, nc) in bash history
+- Data transfer to external IPs via curl/wget/scp
+- /dev/shm usage (RAM-based, evidence destroyed on reboot)
+
+**MITRE:** T1074 (Data Staged), T1560 (Archive Collected Data), T1048 (Exfiltration Over Alternative Protocol)
+
+---
+
 ## Confidence Impact by Check
 
 | Check | Standalone finding | Combined findings |
 |-------|--------------------|-------------------|
-| Active C2 connection | → Confirmed | — |
-| Log deletion (Event 1102) | → Confirmed | — |
-| Webshell found | → Confirmed | — |
-| Unknown WMI subscription | → Likely | + account manipulation → Confirmed |
-| Anomalous autorun entry | → Suspected | + LOLBin → Likely |
-| Unusual account created | → Suspected | + external connection → Likely |
-| Credential dump tool trace | → Likely | + lateral movement → Confirmed |
+| Active C2 connection | → confirmed | — |
+| Log deletion (Event 1102) | → confirmed | — |
+| Webshell found | → confirmed | — |
+| BloodHound/SharpHound execution | → confirmed | — |
+| VSS deletion | → high | + archive in Temp → confirmed |
+| Unknown WMI subscription | → high | + account manipulation → confirmed |
+| Known attack tool in Prefetch | → high | + C2 connection → confirmed |
+| Sensitive file LNK (SAM/NTDS.dit) | → high | + credential dump → confirmed |
+| Zone.Id=3 executable in staging path | → medium | + process execution → high |
+| Anomalous autorun entry | → medium | + LOLBin → high |
+| Unusual account created | → medium | + external connection → high |
+| Credential dump tool trace | → high | + lateral movement → confirmed |
+| Exfiltration tool (rclone/WinSCP) | → medium | + staging archive → high |
+| Recon command cluster | → medium | + lateral movement → high |
 
 ---
 
@@ -321,35 +491,40 @@ Before LLM analysis, `internal/analyzer/filter.go` applies deterministic rules t
 | `ExfilTool` | staging_exfiltration | 75 | rclone/WinSCP/filezilla in Prefetch |
 | `BloodHoundPattern` | discovery_recon | 100 | SharpHound.exe or `-CollectionMethod All` |
 | `ReconCommand` | discovery_recon | 60 | nltest /domain_trusts, net group "Domain Admins", whoami /all |
+| `UnsignedExternalConn` | c2_connections | 75 | Unsigned process with active external connection |
+| `SuspiciousPort` | c2_connections | 70 | Connection to known C2 ports (4444, 31337, 5555, etc.) |
+| `SystemProcessExternal` | c2_connections | 85 | svchost/lsass/csrss connecting to external IP |
+| `SuspiciousServiceInstall` | c2_connections | 85-95 | PSEXESVC or service binary in Temp/AppData path |
 
 SUSPICIOUS items are forwarded to the LLM with `rule_flags` annotation for confirmation/refutation.
 SAFE items (Windows paths, known-good domains) are excluded before LLM to reduce token usage.
 
-## Interactive Serve Mode (`--serve`)
+## Interactive Serve Mode
 
-분석 완료 후 `--serve` 플래그를 사용하면 로컬 HTTP 서버가 시작되고 브라우저가 자동으로 열린다.
+After analysis completes, an interactive HTTP server starts automatically (disable with `--no-serve`). The browser opens to the report.
 
 ```
-coroner --serve
-coroner --serve --port 9000
-coroner --fixture tests/fixtures/ --skip-collect --serve
+coroner                                               # serve enabled by default
+coroner --no-serve                                    # disable serve (CI/scripted use)
+coroner --port 9000                                   # custom port (default: 8742)
+coroner --fixture tests/fixtures/ --skip-collect      # serve with fixture data
 ```
 
-리포트를 보며 "Analyst Feedback" 버튼으로 분석자 컨텍스트를 입력하면 LLM이 재평가하여 리포트를 업데이트한다.
+Use the "Analyst Feedback" button in the report to provide additional context. The LLM re-evaluates findings with the analyst's input and updates the report.
 
 ### Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/` | GET | 현재 리포트 HTML 서빙 |
-| `/health` | GET | 서버 상태 확인 (`{"status":"ok"}`) |
-| `/re-evaluate` | POST | 분석자 의견으로 LLM 재분석, 새 HTML 반환 |
+| `/` | GET | Serve current report HTML |
+| `/health` | GET | Health check (`{"status":"ok"}`) |
+| `/re-evaluate` | POST | Re-analyze with analyst context, return updated HTML |
 
 ### Re-evaluate Request
 
 ```json
 {
-  "context": "rclone.exe는 백업용으로 설치한 도구입니다"
+  "context": "rclone.exe is a backup tool installed by the ops team"
 }
 ```
 
@@ -368,3 +543,4 @@ coroner --fixture tests/fixtures/ --skip-collect --serve
 - `file_download` — wget/curl download artifacts
 - `rootkit_indicators` — hidden processes/files, LD_PRELOAD manipulation
 - `suid_abuse` — SUID binary manipulation, capabilities abuse
+- `container_escape` — container breakout and privilege escalation traces

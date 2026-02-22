@@ -83,13 +83,18 @@ try {
             try {
                 $log = Get-WinEvent -ListLog $logName -ErrorAction SilentlyContinue
                 if ($log) {
+                    $fillPct = if ($log.MaximumSizeInBytes -gt 0) {
+                        [math]::Round(($log.FileSize / $log.MaximumSizeInBytes) * 100, 1)
+                    } else { 0 }
                     $result.log_sizes += [PSCustomObject]@{
-                        name          = $logName
-                        file_size_mb  = [math]::Round($log.FileSize / 1MB, 2)
-                        max_size_mb   = [math]::Round($log.MaximumSizeInBytes / 1MB, 2)
-                        record_count  = $log.RecordCount
-                        is_enabled    = $log.IsEnabled
-                        last_write    = if ($log.LastWriteTime) { $log.LastWriteTime.ToString("o") } else { "" }
+                        name            = $logName
+                        file_size_mb    = [math]::Round($log.FileSize / 1MB, 2)
+                        max_size_mb     = [math]::Round($log.MaximumSizeInBytes / 1MB, 2)
+                        fill_percent    = $fillPct
+                        log_mode        = $log.LogMode.ToString()
+                        record_count    = $log.RecordCount
+                        is_enabled      = $log.IsEnabled
+                        last_write      = if ($log.LastWriteTime) { $log.LastWriteTime.ToString("o") } else { "" }
                     }
                 }
             }

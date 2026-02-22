@@ -509,6 +509,42 @@ func contains(s, substr string) bool {
 	return len(s) > 0 && len(substr) > 0 && (s == substr || len(s) > len(substr) && findSubstring(s, substr))
 }
 
+func TestCheckPrompts_CoverAllWindowsChecks(t *testing.T) {
+	windowsChecks := []string{
+		"c2_connections", "account_compromise", "persistence", "lolbin_abuse",
+		"fileless_attack", "log_tampering", "credential_dump", "lateral_movement",
+		"webshell", "discovery_recon", "process_execution", "file_access",
+		"file_download", "staging_exfiltration",
+	}
+	for _, checkID := range windowsChecks {
+		prompt := BuildCheckPrompt(checkID, "WIN-01", "windows", `{"test":true}`)
+		// Should NOT use the generic fallback (which contains "for intrusion indicators")
+		if contains(prompt, "for intrusion indicators") {
+			t.Errorf("check %q uses generic fallback prompt instead of a specialized one", checkID)
+		}
+		if !contains(prompt, "WIN-01") {
+			t.Errorf("check %q prompt should contain hostname", checkID)
+		}
+	}
+}
+
+func TestCheckPrompts_CoverAllLinuxChecks(t *testing.T) {
+	linuxChecks := []string{
+		"c2_connections", "account_compromise", "persistence", "lolbin_abuse",
+		"fileless_attack", "log_tampering", "credential_dump", "lateral_movement",
+		"webshell", "discovery_recon", "staging_exfiltration",
+	}
+	for _, checkID := range linuxChecks {
+		prompt := BuildCheckPrompt(checkID, "LNX-01", "linux", `{"test":true}`)
+		if contains(prompt, "for intrusion indicators") {
+			t.Errorf("linux check %q uses generic fallback prompt instead of a specialized one", checkID)
+		}
+		if !contains(prompt, "LNX-01") {
+			t.Errorf("linux check %q prompt should contain hostname", checkID)
+		}
+	}
+}
+
 func findSubstring(s, sub string) bool {
 	for i := 0; i <= len(s)-len(sub); i++ {
 		if s[i:i+len(sub)] == sub {

@@ -201,3 +201,184 @@ func TestRulesForCheck_UnknownCheck(t *testing.T) {
 		t.Errorf("expected nil/empty rules for unknown check, got %d rules", len(rules))
 	}
 }
+
+// FP-005: signature_status="error" should NOT trigger FilterSuspicious
+func TestUnsignedRunKeyRule_ErrorStatus(t *testing.T) {
+	rule := UnsignedRunKeyRule{}
+	tests := []struct {
+		name    string
+		sig     string
+		wantRes FilterResult
+	}{
+		{"valid", "Valid", FilterUncertain},
+		{"notsigned", "NotSigned", FilterSuspicious},
+		{"error", "Error", FilterUncertain},         // FP-005: error → uncertain
+		{"hashmismatch", "HashMismatch", FilterSuspicious},
+		{"filenotfound", "FileNotFound", FilterUncertain},
+		{"pathnotresolved", "PathNotResolved", FilterUncertain},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			item := map[string]interface{}{
+				"value": `C:\Users\Admin\app.exe`,
+				"signature": map[string]interface{}{
+					"status": tt.sig,
+				},
+			}
+			res, _, _ := rule.Apply(item)
+			if res != tt.wantRes {
+				t.Errorf("sig=%q: result=%d, want=%d", tt.sig, res, tt.wantRes)
+			}
+		})
+	}
+}
+
+// --- c2_connections rule tests ---
+
+func TestUnsignedExternalConnRule(t *testing.T) {
+	rule := UnsignedExternalConnRule{}
+	tests := []struct {
+		name    string
+		sig     string
+		wantRes FilterResult
+	}{
+		{"valid", "Valid", FilterUncertain},
+		{"notsigned", "NotSigned", FilterSuspicious},
+		{"skipped", "skipped", FilterUncertain},
+		{"error", "error", FilterUncertain},
+		{"hashmismatch", "HashMismatch", FilterSuspicious},
+		{"empty", "", FilterUncertain},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			item := map[string]interface{}{
+				"process_name":     "evil.exe",
+				"signature_status": tt.sig,
+				"remote_address":   "185.100.87.42",
+			}
+			res, _, _ := rule.Apply(item)
+			if res != tt.wantRes {
+				t.Errorf("sig=%q: result=%d, want=%d", tt.sig, res, tt.wantRes)
+			}
+		})
+	}
+}
+
+func TestSuspiciousPortRule(t *testing.T) {
+	rule := SuspiciousPortRule{}
+	tests := []struct {
+		name    string
+		port    interface{}
+		wantRes FilterResult
+	}{
+		{"c2 port 4444", float64(4444), FilterSuspicious},
+		{"c2 port 31337", float64(31337), FilterSuspicious},
+		{"normal https", float64(443), FilterUncertain},
+		{"normal http", float64(80), FilterUncertain},
+		{"no port", nil, FilterUncertain},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			item := map[string]interface{}{
+				"process_name":   "test.exe",
+				"remote_address": "1.2.3.4",
+			}
+			if tt.port != nil {
+				item["remote_port"] = tt.port
+			}
+			res, _, _ := rule.Apply(item)
+			if res != tt.wantRes {
+				t.Errorf("port=%v: result=%d, want=%d", tt.port, res, tt.wantRes)
+			}
+		})
+	}
+}
+
+func TestSystemProcessExternalRule(t *testing.T) {
+	rule := SystemProcessExternalRule{}
+	tests := []struct {
+		name    string
+		proc    string
+		wantRes FilterResult
+	}{
+		{"svchost external", "svchost", FilterSuspicious},
+		{"lsass external", "lsass", FilterSuspicious},
+		{"chrome external", "chrome", FilterUncertain},
+		{"normal app", "myapp.exe", FilterUncertain},
+		{"empty proc", "", FilterUncertain},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			item := map[string]interface{}{
+				"process_name":   tt.proc,
+				"remote_address": "185.100.87.42",
+			}
+			res, _, _ := rule.Apply(item)
+			if res != tt.wantRes {
+				t.Errorf("proc=%q: result=%d, want=%d", tt.proc, res, tt.wantRes)
+			}
+		})
+	}
+}
+
+func TestSuspiciousServiceInstallRule(t *testing.T) {
+	rule := SuspiciousServiceInstallRule{}
+	tests := []struct {
+		name    string
+		svcName string
+		imgPath string
+		wantRes FilterResult
+		wantMin int
+	}{
+		{
+			name:    "PSEXESVC",
+			svcName: "PSEXESVC",
+			imgPath: `%SystemRoot%\PSEXESVC.exe`,
+			wantRes: FilterSuspicious,
+			wantMin: 90,
+		},
+		{
+			name:    "temp path service",
+			svcName: "WindowsUpdateSvc",
+			imgPath: `C:\Windows\Temp\svchost.exe`,
+			wantRes: FilterSuspicious,
+			wantMin: 80,
+		},
+		{
+			name:    "encoded command",
+			svcName: "UpdateSvc",
+			imgPath: `powershell.exe -EncodedCommand SGVsbG8=`,
+			wantRes: FilterSuspicious,
+			wantMin: 85,
+		},
+		{
+			name:    "legitimate service",
+			svcName: "MsMpSvc",
+			imgPath: `C:\ProgramData\Microsoft\Windows Defender\Platform\MsMpEng.exe`,
+			wantRes: FilterUncertain,
+			wantMin: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			item := map[string]interface{}{
+				"service_name": tt.svcName,
+				"image_path":   tt.imgPath,
+			}
+			res, score, _ := rule.Apply(item)
+			if res != tt.wantRes {
+				t.Errorf("svc=%q img=%q: result=%d, want=%d", tt.svcName, tt.imgPath, res, tt.wantRes)
+			}
+			if tt.wantMin > 0 && score < tt.wantMin {
+				t.Errorf("svc=%q: score=%d, want>=%d", tt.svcName, score, tt.wantMin)
+			}
+		})
+	}
+}
+
+func TestRulesForCheck_C2Connections(t *testing.T) {
+	rules := RulesForCheck("c2_connections")
+	if len(rules) != 4 {
+		t.Errorf("expected 4 rules for c2_connections, got %d", len(rules))
+	}
+}

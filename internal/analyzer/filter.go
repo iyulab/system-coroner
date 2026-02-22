@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -186,8 +187,10 @@ type UnsignedRunKeyRule struct{}
 func (r UnsignedRunKeyRule) Name() string { return "UnsignedRunKey" }
 func (r UnsignedRunKeyRule) Apply(item map[string]interface{}) (FilterResult, int, string) {
 	sig := getNestedString(item, "signature", "status")
-	// Skip if no signature data or signature is valid
-	if sig == "" || sig == "valid" || sig == "pathnotresolved" || sig == "filenotfound" {
+	// Skip if no signature data, signature is valid, or signature check itself failed (FP-005).
+	// "error" means Get-AuthenticodeSignature failed (file locked, access denied, etc.),
+	// NOT that the file has an invalid signature — treat as uncertain.
+	if sig == "" || sig == "valid" || sig == "pathnotresolved" || sig == "filenotfound" || sig == "error" {
 		return FilterUncertain, 20, ""
 	}
 	value := strings.ToLower(stringVal(item, "value", "path"))
@@ -382,6 +385,113 @@ func (r ReconCommandRule) Apply(item map[string]interface{}) (FilterResult, int,
 	return FilterUncertain, 20, ""
 }
 
+// --- c2_connections rules ---
+
+// UnsignedExternalConnRule flags unsigned processes making external network connections.
+// Legitimate software is almost always code-signed; unsigned binaries connecting externally
+// are a strong C2 indicator.
+type UnsignedExternalConnRule struct{}
+
+func (r UnsignedExternalConnRule) Name() string { return "UnsignedExternalConn" }
+func (r UnsignedExternalConnRule) Apply(item map[string]interface{}) (FilterResult, int, string) {
+	sig := strings.ToLower(stringVal(item, "signature_status"))
+	if sig == "" || sig == "valid" || sig == "skipped" || sig == "error" {
+		return FilterUncertain, 20, ""
+	}
+	// "notsigned", "hashmismatch", "unknownerror", etc. → suspicious
+	proc := stringVal(item, "process_name", "process_path")
+	return FilterSuspicious, 75, "unsigned process (" + sig + ") with external connection: " + proc
+}
+
+// SuspiciousPortRule flags connections on well-known C2/backdoor ports.
+type SuspiciousPortRule struct{}
+
+var suspiciousPorts = map[int]bool{
+	4444: true, 1337: true, 9001: true, 5555: true, 6666: true,
+	7777: true, 8888: true, 1234: true, 31337: true,
+}
+
+func (r SuspiciousPortRule) Name() string { return "SuspiciousPort" }
+func (r SuspiciousPortRule) Apply(item map[string]interface{}) (FilterResult, int, string) {
+	port := 0
+	if v, ok := item["remote_port"]; ok {
+		switch p := v.(type) {
+		case float64:
+			port = int(p)
+		case int:
+			port = p
+		}
+	}
+	if port == 0 {
+		return FilterUncertain, 20, ""
+	}
+	if suspiciousPorts[port] {
+		proc := stringVal(item, "process_name")
+		return FilterSuspicious, 70, fmt.Sprintf("connection to known C2 port %d by %s", port, proc)
+	}
+	return FilterUncertain, 20, ""
+}
+
+// SystemProcessExternalRule flags system processes connecting to non-standard external IPs.
+// svchost, lsass, services.exe should only connect to Microsoft infrastructure.
+type SystemProcessExternalRule struct{}
+
+var systemProcesses = []string{"svchost", "lsass", "services", "csrss", "smss", "wininit"}
+
+func (r SystemProcessExternalRule) Name() string { return "SystemProcessExternal" }
+func (r SystemProcessExternalRule) Apply(item map[string]interface{}) (FilterResult, int, string) {
+	proc := strings.ToLower(stringVal(item, "process_name"))
+	if proc == "" {
+		return FilterUncertain, 20, ""
+	}
+	isSystemProc := false
+	for _, sp := range systemProcesses {
+		if proc == sp || proc == sp+".exe" {
+			isSystemProc = true
+			break
+		}
+	}
+	if !isSystemProc {
+		return FilterUncertain, 20, ""
+	}
+	// System process connecting externally — flag as suspicious
+	remote := stringVal(item, "remote_address")
+	return FilterSuspicious, 85, "system process " + proc + " connecting to external IP " + remote
+}
+
+// SuspiciousServiceInstallRule flags service installations matching known attack tool patterns
+// or services installed from staging directories (MITRE T1543.003).
+type SuspiciousServiceInstallRule struct{}
+
+var knownAttackServiceNames = []string{
+	"psexesvc", "meterpreter", "cobaltstrike", "beacon",
+}
+
+func (r SuspiciousServiceInstallRule) Name() string { return "SuspiciousServiceInstall" }
+func (r SuspiciousServiceInstallRule) Apply(item map[string]interface{}) (FilterResult, int, string) {
+	svcName := strings.ToLower(stringVal(item, "service_name"))
+	imgPath := strings.ToLower(stringVal(item, "image_path"))
+
+	// Check for known attack tool service names
+	for _, name := range knownAttackServiceNames {
+		if strings.Contains(svcName, name) {
+			return FilterSuspicious, 95, "known attack tool service: " + svcName
+		}
+	}
+
+	// Check for services installed from staging directories
+	if containsAny(imgPath, `\temp\`, `\appdata\`, `\users\public\`, `\programdata\temp`) {
+		return FilterSuspicious, 85, "service installed from staging directory: " + imgPath
+	}
+
+	// Check for encoded commands in image path
+	if containsAny(imgPath, "encodedcommand", "frombase64", "-enc ") {
+		return FilterSuspicious, 90, "service with encoded command in ImagePath: " + imgPath
+	}
+
+	return FilterUncertain, 20, ""
+}
+
 // ============================================================
 // RulesForCheck returns the rule set for a given check ID.
 // ============================================================
@@ -390,6 +500,8 @@ func (r ReconCommandRule) Apply(item map[string]interface{}) (FilterResult, int,
 // Returns an empty slice for checks without specialized rules (fallback: all items uncertain).
 func RulesForCheck(checkID string) []FilterRule {
 	switch checkID {
+	case "c2_connections":
+		return []FilterRule{UnsignedExternalConnRule{}, SuspiciousPortRule{}, SystemProcessExternalRule{}, SuspiciousServiceInstallRule{}}
 	case "persistence":
 		return []FilterRule{UnsignedTempRunKeyRule{}, UnsignedRunKeyRule{}}
 	case "process_execution":

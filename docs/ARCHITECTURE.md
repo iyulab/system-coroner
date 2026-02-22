@@ -55,13 +55,13 @@
                                       │
   ┌───────────────────────────────────▼──────────────────────┐
   │  scripts/windows/         scripts/linux/                  │
-  │  *.ps1 (9 checks)         *.sh (9 checks)                 │
+  │  *.ps1 (14 checks)        *.sh (11 checks)                │
   │  (embedded via go:embed)                                  │
   └───────────────────────────────────────────────────────────┘
                                       │
                            ┌──────────▼───────────────────┐
                            │  output/{timestamp}/          │
-                           │  ├── *.json (9 raw results)  │
+                           │  ├── *.json (raw results)    │
                            │  ├── manifest.json            │
                            │  └── report.html              │
                            │                               │
@@ -94,8 +94,8 @@ system-coroner/
 │   │
 │   ├── platform/
 │   │   ├── platform.go                # OS detection, Check type definition
-│   │   ├── windows.go                 # Windows check definitions (9 checks)
-│   │   └── linux.go                   # Linux check definitions (9 checks)
+│   │   ├── windows.go                 # Windows check definitions (14 checks)
+│   │   └── linux.go                   # Linux check definitions (11 checks)
 │   │
 │   ├── sigma/
 │   │   ├── engine.go                  # Sigma Engine: New(fs.FS), NewDefault(), MatchAll()
@@ -109,27 +109,37 @@ system-coroner/
 │   ├── analyzer/
 │   │   ├── analyzer.go                # Two-phase LLM orchestration
 │   │   ├── client.go                  # LLM HTTP client: Anthropic, OpenAI, Ollama, GPUStack
+│   │   ├── filter.go                  # Stage 2 rule-based scoring engine
 │   │   ├── preprocess.go              # Known-Good filter, field truncation, event aggregation
 │   │   ├── prompt.go                  # Intrusion-scenario prompt generation
 │   │   ├── response.go                # Structured response parsing
 │   │   └── schema.go                  # Finding, Verdict schema + JSON Schema definitions
 │   │
-│   └── reporter/
-│       ├── reporter.go                # html/template rendering
-│       ├── aggregator.go              # Confidence aggregation, isolation verdict logic
-│       ├── exporter.go                # ZIP evidence package with SHA-256 hashes
-│       └── templates/
-│           └── report.html.tmpl       # Self-contained HTML report template
+│   ├── reporter/
+│   │   ├── reporter.go                # html/template rendering
+│   │   ├── aggregator.go              # Confidence aggregation, isolation verdict logic
+│   │   ├── exporter.go                # ZIP evidence package with SHA-256 hashes
+│   │   ├── gap_analysis.go            # RP-007: Evidence gap analysis
+│   │   ├── log_capacity.go            # RP-009: Log capacity warnings
+│   │   └── templates/
+│   │       └── report.html.tmpl       # Self-contained HTML report template
+│   │
+│   ├── server/
+│   │   ├── server.go                  # Interactive HTTP server (serve mode)
+│   │   └── server_test.go
+│   │
+│   └── browser/
+│       └── open.go                    # Browser auto-open (cross-platform)
 │
 ├── scripts/
-│   ├── windows/                       # PowerShell collection scripts (9 files)
-│   └── linux/                         # Bash collection scripts (9 files)
+│   ├── windows/                       # PowerShell collection scripts (14 files)
+│   └── linux/                         # Bash collection scripts (11 files)
 │
 ├── tests/
 │   └── fixtures/
 │       ├── windows/
-│       │   ├── clean/                 # Normal environment fixtures (9 files)
-│       │   └── compromised/           # Compromised environment fixtures (9 files)
+│       │   ├── clean/                 # Normal environment fixtures
+│       │   └── compromised/           # Compromised environment fixtures
 │       └── linux/
 │           ├── clean/
 │           └── compromised/
@@ -160,7 +170,7 @@ The `Collector` accepts `fs.FS` (not `embed.FS` directly), enabling `testing/fst
 
 ### 2. Parallel collection (goroutine per check)
 
-All detection checks run concurrently. 9 checks × average 10s ≠ 90s — only the slowest check's duration (~30s) is paid.
+All detection checks run concurrently. 14 checks (Windows) / 11 checks (Linux) × average 10s ≠ 140s — only the slowest check's duration (~30s) is paid.
 
 ```
 goroutine: c2_connections.ps1      ─┐
@@ -216,9 +226,9 @@ Respond only in this JSON format: ..."
 Per-check analysis and cross-check synthesis are separated. This prevents context window overflow and enables cross-check correlation:
 
 ```
-c2_connections  → Finding{ confidence: "suspected", risk: "high" }
+c2_connections  → Finding{ confidence: "medium", risk: "high" }
 log_tampering   → Finding{ confidence: "confirmed", risk: "critical" }
-account_changes → Finding{ confidence: "likely",    risk: "high" }
+account_changes → Finding{ confidence: "high",    risk: "high" }
         │
         └──► Aggregator ──► cross-check synthesis ──► overall verdict
                             "Log deletion + C2 suspect + account changes
@@ -263,7 +273,7 @@ Schema definitions: `internal/analyzer/schema.go`
 ```json
 {
   "check": "c2_connections",
-  "intrusion_confidence": "likely",
+  "intrusion_confidence": "high",
   "risk_level": "high",
   "title": "svchost.exe anomalous external connection detected",
   "attack_scenario": "System process impersonation for C2 beaconing",
@@ -312,27 +322,36 @@ Schema definitions: `internal/analyzer/schema.go`
 
 ```go
 func (a *Aggregator) ShouldIsolate(findings []Finding) IsolationRecommendation {
-    // Immediate isolation: any Confirmed finding
+    // Immediate isolation: any confirmed finding
     for _, f := range findings {
         if f.IntrusionConfidence == "confirmed" {
             return IsolationRecommendation{
                 Isolate: true,
                 Urgency: "immediate",
                 Reason:  f.Title,
+                Banner:  "red",
             }
         }
     }
 
-    // Composite isolation: 2+ Likely findings simultaneously
-    if countByConfidence(findings, "likely") >= 2 {
+    // Urgent isolation: 2+ high confidence findings
+    highCount := countByConfidence(findings, "high")
+    if highCount >= 2 {
         return IsolationRecommendation{
             Isolate: true,
             Urgency: "urgent",
             Reason:  "Multiple high-confidence intrusion indicators found simultaneously",
+            Banner:  "red",
         }
     }
 
-    return IsolationRecommendation{Isolate: false}
+    // Monitor: 1 high finding
+    if highCount == 1 {
+        return IsolationRecommendation{Isolate: false, Urgency: "monitor", Banner: "yellow"}
+    }
+
+    // Warning: medium findings → yellow; else clean → green
+    return IsolationRecommendation{Isolate: false, Urgency: "none", Banner: "green"}
 }
 ```
 
@@ -430,10 +449,9 @@ Implementation: `internal/reporter/exporter.go` — follows DFIR evidence preser
 make build-all   # Cross-compile all platforms
 # → build/coroner-windows-amd64.exe
 # → build/coroner-linux-amd64
-# → build/coroner-darwin-arm64
-# → build/coroner-darwin-amd64
+# → build/coroner-linux-arm64
 
-make test        # Unit tests (175 passing)
+make test        # Unit tests (224 passing)
 make lint        # golangci-lint
 ```
 

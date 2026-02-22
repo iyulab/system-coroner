@@ -51,6 +51,13 @@ var extraKnownGoodIPs []*net.IPNet
 // Artifacts whose paths start with one of these values are annotated as known-good (FP-003).
 var knownGoodPaths []string
 
+// selfPIDs holds PIDs of the coroner process and its spawned children (FP-006).
+// Processes matching these PIDs are annotated so the LLM does not flag them as suspicious.
+var selfPIDs []int
+
+// selfProcessNames holds process name patterns that identify the coroner tool (FP-006).
+var selfProcessNames = []string{"coroner"}
+
 func init() {
 	for _, cidr := range knownGoodCIDRs {
 		_, n, err := net.ParseCIDR(cidr)
@@ -68,6 +75,19 @@ func AddKnownGoodPath(path string) {
 	if path != "" {
 		knownGoodPaths = append(knownGoodPaths, path)
 	}
+}
+
+// AddSelfPID registers a PID as belonging to the coroner tool (FP-006).
+// Processes matching this PID will be annotated during preprocessing.
+func AddSelfPID(pid int) {
+	if pid > 0 {
+		selfPIDs = append(selfPIDs, pid)
+	}
+}
+
+// ResetSelfPIDs clears the registered self PIDs (used in tests).
+func ResetSelfPIDs() {
+	selfPIDs = nil
 }
 
 // AddKnownGoodIP registers an additional IP address or CIDR as known-good.
@@ -145,6 +165,15 @@ func Preprocess(checkID, osName, data string) PreprocessResult {
 	if len(knownGoodPaths) > 0 {
 		if obj, ok := processed.(map[string]interface{}); ok {
 			processed = annotateKnownGoodPaths(obj)
+		}
+	}
+
+	// FP-006: Annotate processes belonging to the coroner tool itself.
+	// During collection, coroner spawns multiple PowerShell/bash processes that appear
+	// in process lists. Mark them so the LLM does not flag them as suspicious.
+	if len(selfPIDs) > 0 || isProcessCheck(checkID) {
+		if obj, ok := processed.(map[string]interface{}); ok {
+			processed = filterSelfProcesses(obj)
 		}
 	}
 
@@ -526,6 +555,103 @@ func itemMatchesKnownGoodPath(item map[string]interface{}) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+// isProcessCheck returns true for checks that produce process listing data.
+func isProcessCheck(checkID string) bool {
+	return checkID == "staging_exfiltration" || checkID == "c2_connections"
+}
+
+// filterSelfProcesses annotates processes in the data that belong to the coroner tool.
+// It matches by PID (from selfPIDs) and by process name ("coroner").
+// Matched items receive an _analysis_hint so the LLM knows to ignore them.
+func filterSelfProcesses(obj map[string]interface{}) map[string]interface{} {
+	if len(selfPIDs) == 0 && len(selfProcessNames) == 0 {
+		return obj
+	}
+
+	pidSet := make(map[int]bool, len(selfPIDs))
+	for _, pid := range selfPIDs {
+		pidSet[pid] = true
+	}
+
+	result := make(map[string]interface{}, len(obj))
+	for k, v := range obj {
+		arr, ok := v.([]interface{})
+		if !ok {
+			result[k] = v
+			continue
+		}
+
+		// Only annotate arrays that look like process lists
+		if !isProcessArray(k) {
+			result[k] = v
+			continue
+		}
+
+		annotated := make([]interface{}, 0, len(arr))
+		for _, item := range arr {
+			itemObj, ok := item.(map[string]interface{})
+			if !ok {
+				annotated = append(annotated, item)
+				continue
+			}
+
+			if isSelfProcess(itemObj, pidSet) {
+				cp := copyMap(itemObj)
+				cp["_analysis_hint"] = "This process belongs to the coroner analysis tool and should not be treated as suspicious"
+				annotated = append(annotated, cp)
+			} else {
+				annotated = append(annotated, itemObj)
+			}
+		}
+		result[k] = annotated
+	}
+	return result
+}
+
+// isProcessArray returns true if a field name suggests it holds process data.
+func isProcessArray(key string) bool {
+	lower := strings.ToLower(key)
+	return strings.Contains(lower, "process") ||
+		strings.Contains(lower, "proc") ||
+		strings.Contains(lower, "running") ||
+		strings.Contains(lower, "active")
+}
+
+// isSelfProcess checks whether a process entry matches a known self PID or process name.
+func isSelfProcess(item map[string]interface{}, pidSet map[int]bool) bool {
+	// Check PID fields
+	for _, pidKey := range []string{"pid", "PID", "process_id", "ProcessId"} {
+		if v, ok := item[pidKey]; ok {
+			switch pid := v.(type) {
+			case float64:
+				if pidSet[int(pid)] {
+					return true
+				}
+			case int:
+				if pidSet[pid] {
+					return true
+				}
+			}
+		}
+	}
+
+	// Check process name fields (fallback)
+	for _, nameKey := range []string{"name", "process_name", "Name", "ProcessName", "ImageName"} {
+		if v, ok := item[nameKey]; ok {
+			if name, ok := v.(string); ok {
+				nameLower := strings.ToLower(name)
+				for _, selfName := range selfProcessNames {
+					if strings.Contains(nameLower, selfName) {
+						return true
+					}
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 // truncateRaw applies a simple length limit to non-JSON string data.

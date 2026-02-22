@@ -28,6 +28,14 @@ ANALYSIS RULES:
 4. Explicitly state what NORMAL looks like for each finding to justify why this is ABNORMAL
 5. If data is insufficient to make a determination, say so — do not speculate
 
+FINDING TYPE CLASSIFICATION:
+Each finding MUST include a "finding_type" field with one of these values:
+- "intrusion_indicator": Evidence of actual intrusion ACTIVITY — process execution, network connections, file access, lateral movement, data exfiltration. This is the default.
+- "exposure": A configuration weakness or hardening gap that COULD be exploited but shows no evidence of actual exploitation. Examples: LSASS PPL disabled (RunAsPPL=0), WDigest UseLogonCredential enabled, audit policy gaps, missing security updates. These are security posture issues, NOT intrusion evidence.
+- "informational": Reference-only observations with no actionable security implication.
+
+IMPORTANT: The purpose of this tool is to detect INTRUSION EVIDENCE, not audit security configurations. Configuration weaknesses (PPL disabled, WDigest enabled, weak audit policies) should be classified as "exposure" so they appear in a separate Hardening Recommendations section rather than cluttering the intrusion findings.
+
 CONFIDENCE CALIBRATION:
 - confirmed: Multiple independent indicators from different data sources all point to the same conclusion.
 - high: Strong single indicator or 2 correlated indicators.
@@ -95,6 +103,14 @@ ANALYSIS RULES:
 3. Cross-correlate findings across different data sources
 4. Explicitly state what NORMAL looks like for each finding to justify why this is ABNORMAL
 5. If data is insufficient to make a determination, say so — do not speculate
+
+FINDING TYPE CLASSIFICATION:
+Each finding MUST include a "finding_type" field with one of these values:
+- "intrusion_indicator": Evidence of actual intrusion ACTIVITY — process execution, network connections, file access, lateral movement, data exfiltration. This is the default.
+- "exposure": A configuration weakness or hardening gap that COULD be exploited but shows no evidence of actual exploitation. Examples: SSH password auth enabled, no fail2ban, permissive sudoers, weak file permissions on sensitive files. These are security posture issues, NOT intrusion evidence.
+- "informational": Reference-only observations with no actionable security implication.
+
+IMPORTANT: The purpose of this tool is to detect INTRUSION EVIDENCE, not audit security configurations. Configuration weaknesses should be classified as "exposure" so they appear in a separate Hardening Recommendations section rather than cluttering the intrusion findings.
 
 CONFIDENCE CALIBRATION:
 - confirmed: Multiple independent indicators from different data sources all point to the same conclusion.

@@ -376,3 +376,99 @@ func TestAnnotateBruteForceContext_WithSuccess(t *testing.T) {
 		t.Error("should NOT add hint when success events exist")
 	}
 }
+
+func TestPreprocess_SelfProcessExclusion(t *testing.T) {
+	// Register a PID as belonging to the coroner tool
+	ResetSelfPIDs()
+	AddSelfPID(2668)
+	AddSelfPID(2264)
+	defer ResetSelfPIDs()
+
+	data := `{"active_processes":[
+		{"name":"coroner.exe","pid":2668,"cpu":1.2},
+		{"name":"powershell.exe","pid":2264,"cpu":0.5},
+		{"name":"svchost.exe","pid":1234,"cpu":0.1},
+		{"name":"evil.exe","pid":9999,"cpu":50.0}
+	]}`
+	result := Preprocess("staging_exfiltration", "windows", data)
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(result.Data), &parsed); err != nil {
+		t.Fatalf("result not valid JSON: %v", err)
+	}
+
+	procs, ok := parsed["active_processes"].([]interface{})
+	if !ok {
+		t.Fatal("active_processes field missing or wrong type")
+	}
+
+	// All 4 processes should still be present (annotated, not removed)
+	if len(procs) != 4 {
+		t.Errorf("expected 4 processes, got %d", len(procs))
+	}
+
+	hintCount := 0
+	for _, p := range procs {
+		pObj := p.(map[string]interface{})
+		if _, ok := pObj["_analysis_hint"]; ok {
+			hintCount++
+		}
+	}
+	// coroner.exe (PID 2668) and powershell.exe (PID 2264) should be annotated
+	if hintCount != 2 {
+		t.Errorf("expected 2 annotated processes, got %d", hintCount)
+	}
+}
+
+func TestPreprocess_NonSelfProcessRetained(t *testing.T) {
+	// No self PIDs registered — unrelated PowerShell should NOT get hint
+	ResetSelfPIDs()
+	defer ResetSelfPIDs()
+
+	data := `{"active_processes":[
+		{"name":"powershell.exe","pid":5555,"cpu":0.3},
+		{"name":"svchost.exe","pid":1234,"cpu":0.1}
+	]}`
+	result := Preprocess("staging_exfiltration", "windows", data)
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(result.Data), &parsed); err != nil {
+		t.Fatalf("result not valid JSON: %v", err)
+	}
+
+	procs := parsed["active_processes"].([]interface{})
+	for _, p := range procs {
+		pObj := p.(map[string]interface{})
+		if _, ok := pObj["_analysis_hint"]; ok {
+			t.Errorf("unrelated process %v should NOT have _analysis_hint", pObj["name"])
+		}
+	}
+}
+
+func TestPreprocess_SelfProcessByName(t *testing.T) {
+	// Even without PID registration, process named "coroner" should be annotated
+	// when processing staging_exfiltration check (isProcessCheck returns true)
+	ResetSelfPIDs()
+	defer ResetSelfPIDs()
+
+	data := `{"active_processes":[
+		{"name":"coroner","pid":9876,"cpu":1.0},
+		{"name":"nginx","pid":100,"cpu":0.5}
+	]}`
+	result := Preprocess("staging_exfiltration", "windows", data)
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(result.Data), &parsed); err != nil {
+		t.Fatalf("result not valid JSON: %v", err)
+	}
+
+	procs := parsed["active_processes"].([]interface{})
+	coronerProc := procs[0].(map[string]interface{})
+	if _, ok := coronerProc["_analysis_hint"]; !ok {
+		t.Error("coroner process should have _analysis_hint even without PID registration")
+	}
+	nginxProc := procs[1].(map[string]interface{})
+	if _, ok := nginxProc["_analysis_hint"]; ok {
+		t.Error("nginx process should NOT have _analysis_hint")
+	}
+}

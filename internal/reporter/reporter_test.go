@@ -241,6 +241,61 @@ func TestGenerate_WithCollectionFailures(t *testing.T) {
 	}
 }
 
+func TestGenerate_WithCollectionFailures_StderrExcerpt(t *testing.T) {
+	rep, err := New()
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+	data := ReportData{
+		Hostname:    "test-host",
+		OS:          "windows",
+		GeneratedAt: time.Now().UTC(),
+		Version:     "test",
+		Isolation:   IsolationRecommendation{Banner: "yellow", Urgency: "monitor"},
+		TotalChecks: 9,
+		CollectionFailures: []CollectionFailure{
+			{
+				CheckID:       "log_tampering",
+				CheckName:     "Log Tampering",
+				Error:         "exec: exit status 1",
+				FailureKind:   "permission_denied",
+				StderrExcerpt: "Access is denied. [Hint: re-run with administrator privileges]",
+			},
+			{
+				CheckID:       "c2_connections",
+				CheckName:     "C2 Connections",
+				Error:         "exec: exit status 1",
+				FailureKind:   "script_error",
+				StderrExcerpt: "Get-NetTCPConnection: command not found",
+			},
+		},
+		CollectionDuration: "5s",
+		AnalysisDuration:   "10s",
+	}
+
+	path, err := rep.Generate(data, tmpDir)
+	if err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+	content, _ := os.ReadFile(path)
+	html := string(content)
+
+	if !strings.Contains(html, "Stderr Excerpt") {
+		t.Error("report should contain Stderr Excerpt column header")
+	}
+	if !strings.Contains(html, "Access is denied.") {
+		t.Error("report should contain stderr excerpt text")
+	}
+	if !strings.Contains(html, "[Hint: re-run with administrator privileges]") {
+		t.Error("report should contain permission hint")
+	}
+	if !strings.Contains(html, "Get-NetTCPConnection: command not found") {
+		t.Error("report should contain stderr excerpt for script error")
+	}
+}
+
 func TestGenerate_KillChainTimeline(t *testing.T) {
 	rep, err := New()
 	if err != nil {
@@ -477,5 +532,125 @@ func TestGenerate_RawCheckData_JSONViewer(t *testing.T) {
 	}
 	if !strings.Contains(html, "copyJsonViewer") {
 		t.Error("report should contain copyJsonViewer function")
+	}
+}
+
+// --- ANA-005: Hardening Recommendations section tests ---
+
+func TestGenerate_HardeningSection(t *testing.T) {
+	rep, err := New()
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+	data := ReportData{
+		Hostname:    "test-host",
+		OS:          "windows",
+		GeneratedAt: time.Now().UTC(),
+		Version:     "test",
+		Isolation:   IsolationRecommendation{Banner: "green", Urgency: "none"},
+		TotalChecks: 5,
+		HardeningFindings: []analyzer.Finding{
+			{
+				Check:               "credential_dump",
+				FindingType:         "exposure",
+				IntrusionConfidence: "low",
+				RiskLevel:           "medium",
+				Title:               "LSASS PPL Protection Disabled",
+				AttackScenario:      "RunAsPPL=0 leaves LSASS vulnerable to credential dumping tools",
+				Evidence:            []string{"RunAsPPL=0 in registry"},
+				ImmediateActions:    []string{"Enable LSASS PPL protection"},
+				MITRE:               []string{"T1003.001"},
+			},
+		},
+		CollectionDuration: "5s",
+		AnalysisDuration:   "10s",
+	}
+
+	path, err := rep.Generate(data, tmpDir)
+	if err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+	content, _ := os.ReadFile(path)
+	html := string(content)
+
+	checks := []string{
+		"Hardening Recommendations",
+		"s-hardening",
+		"EXPOSURE",
+		"LSASS PPL Protection Disabled",
+		"RunAsPPL=0",
+		"Enable LSASS PPL protection",
+		"T1003.001",
+		"security posture improvements",
+	}
+	for _, check := range checks {
+		if !strings.Contains(html, check) {
+			t.Errorf("hardening section should contain %q", check)
+		}
+	}
+
+	// TOC should also have the hardening link
+	if !strings.Contains(html, `data-target="s-hardening"`) {
+		t.Error("TOC should contain link to hardening section")
+	}
+}
+
+func TestGenerate_FindingsSectionExcludesExposure(t *testing.T) {
+	rep, err := New()
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+	data := ReportData{
+		Hostname:    "test-host",
+		OS:          "windows",
+		GeneratedAt: time.Now().UTC(),
+		Version:     "test",
+		Isolation:   IsolationRecommendation{Banner: "yellow", Urgency: "monitor"},
+		TotalChecks: 5,
+		// Findings should only contain intrusion_indicator type
+		Findings: []analyzer.Finding{
+			{
+				Check:               "c2_connections",
+				FindingType:         "intrusion_indicator",
+				IntrusionConfidence: "high",
+				RiskLevel:           "high",
+				Title:               "Active C2 Channel",
+				AttackScenario:      "Outbound C2 connection",
+			},
+		},
+		// Exposure findings go to separate section
+		HardeningFindings: []analyzer.Finding{
+			{
+				Check:               "credential_dump",
+				FindingType:         "exposure",
+				IntrusionConfidence: "low",
+				RiskLevel:           "medium",
+				Title:               "PPL Disabled",
+				AttackScenario:      "LSASS vulnerable",
+			},
+		},
+		CollectionDuration: "5s",
+		AnalysisDuration:   "10s",
+	}
+
+	path, err := rep.Generate(data, tmpDir)
+	if err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+	content, _ := os.ReadFile(path)
+	html := string(content)
+
+	// Findings section should have the intrusion finding
+	if !strings.Contains(html, "Active C2 Channel") {
+		t.Error("findings section should contain intrusion finding")
+	}
+
+	// Hardening section should have the exposure finding
+	if !strings.Contains(html, "PPL Disabled") {
+		t.Error("hardening section should contain exposure finding")
 	}
 }

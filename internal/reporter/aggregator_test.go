@@ -456,6 +456,116 @@ func TestShouldIsolate_NoGaps_NoChange(t *testing.T) {
 	}
 }
 
+// --- ANA-005: Finding type isolation and filtering tests ---
+
+func TestDetermineIsolation_ExposureExcluded(t *testing.T) {
+	agg := &Aggregator{}
+	// Exposure findings should NOT trigger isolation, even with high confidence
+	findings := []analyzer.Finding{
+		{Check: "credential_dump", FindingType: "exposure", IntrusionConfidence: "confirmed", Title: "LSASS PPL disabled"},
+		{Check: "credential_dump2", FindingType: "exposure", IntrusionConfidence: "high", Title: "WDigest enabled"},
+	}
+	result := agg.ShouldIsolate(findings, nil)
+	if result.Isolate {
+		t.Error("exposure findings should NOT trigger isolation")
+	}
+	if result.Urgency != "none" {
+		t.Errorf("expected urgency=none for exposure-only findings, got %s", result.Urgency)
+	}
+	if result.Banner != "green" {
+		t.Errorf("expected banner=green for exposure-only findings, got %s", result.Banner)
+	}
+}
+
+func TestDetermineIsolation_IntrusionIndicatorCounts(t *testing.T) {
+	agg := &Aggregator{}
+	// Mix of intrusion_indicator and exposure: only intrusion should count
+	findings := []analyzer.Finding{
+		{Check: "c2", FindingType: "intrusion_indicator", IntrusionConfidence: "high", Title: "Active C2"},
+		{Check: "cred", FindingType: "exposure", IntrusionConfidence: "high", Title: "PPL disabled"},
+		{Check: "persist", FindingType: "intrusion_indicator", IntrusionConfidence: "high", Title: "Backdoor"},
+	}
+	result := agg.ShouldIsolate(findings, nil)
+	// 2 intrusion_indicator with high → should trigger urgent isolation
+	if !result.Isolate {
+		t.Error("2 high intrusion indicators should trigger isolation")
+	}
+	if result.Urgency != "urgent" {
+		t.Errorf("expected urgency=urgent, got %s", result.Urgency)
+	}
+}
+
+func TestDetermineIsolation_EmptyFindingTypeDefaultsToIntrusion(t *testing.T) {
+	agg := &Aggregator{}
+	// Empty FindingType should be treated as intrusion_indicator (backward compat)
+	findings := []analyzer.Finding{
+		{Check: "c2", FindingType: "", IntrusionConfidence: "confirmed", Title: "C2 confirmed"},
+	}
+	result := agg.ShouldIsolate(findings, nil)
+	if !result.Isolate {
+		t.Error("empty finding_type should default to intrusion_indicator and trigger isolation")
+	}
+	if result.Urgency != "immediate" {
+		t.Errorf("expected urgency=immediate, got %s", result.Urgency)
+	}
+}
+
+func TestFilterIntrusionFindings(t *testing.T) {
+	findings := []analyzer.Finding{
+		{Check: "c2", FindingType: "intrusion_indicator"},
+		{Check: "cred", FindingType: "exposure"},
+		{Check: "old", FindingType: ""}, // defaults to intrusion_indicator
+		{Check: "info", FindingType: "informational"},
+	}
+	result := FilterIntrusionFindings(findings)
+	if len(result) != 2 {
+		t.Fatalf("expected 2 intrusion findings, got %d", len(result))
+	}
+	if result[0].Check != "c2" {
+		t.Errorf("first finding should be c2, got %s", result[0].Check)
+	}
+	if result[1].Check != "old" {
+		t.Errorf("second finding should be old (empty=default), got %s", result[1].Check)
+	}
+}
+
+func TestFilterExposureFindings(t *testing.T) {
+	findings := []analyzer.Finding{
+		{Check: "c2", FindingType: "intrusion_indicator"},
+		{Check: "cred", FindingType: "exposure"},
+		{Check: "wdigest", FindingType: "exposure"},
+		{Check: "info", FindingType: "informational"},
+	}
+	result := FilterExposureFindings(findings)
+	if len(result) != 2 {
+		t.Fatalf("expected 2 exposure findings, got %d", len(result))
+	}
+	if result[0].Check != "cred" {
+		t.Errorf("first exposure should be cred, got %s", result[0].Check)
+	}
+	if result[1].Check != "wdigest" {
+		t.Errorf("second exposure should be wdigest, got %s", result[1].Check)
+	}
+}
+
+func TestSummarizeConfidence_OnlyCountsIntrusionByDefault(t *testing.T) {
+	// SummarizeConfidence counts ALL findings regardless of type
+	// (it is the caller's responsibility to filter before calling)
+	findings := []analyzer.Finding{
+		{IntrusionConfidence: "high", FindingType: "intrusion_indicator"},
+		{IntrusionConfidence: "high", FindingType: "exposure"},
+		{IntrusionConfidence: "low", FindingType: "informational"},
+	}
+	s := SummarizeConfidence(findings)
+	// All findings counted
+	if s.High != 2 {
+		t.Errorf("expected High=2, got %d", s.High)
+	}
+	if s.Low != 1 {
+		t.Errorf("expected Low=1, got %d", s.Low)
+	}
+}
+
 func TestCountHighImpactGaps(t *testing.T) {
 	cases := []struct {
 		name     string

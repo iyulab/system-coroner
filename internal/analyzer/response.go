@@ -39,6 +39,15 @@ func ParseFinding(checkID, rawOutput string) (Finding, error) {
 		}
 	}
 
+	// Validate finding type (ANA-005): default to intrusion_indicator for backward compat
+	if finding.FindingType != "" {
+		finding.FindingType = strings.ToLower(finding.FindingType)
+		if !ValidFindingTypes[finding.FindingType] {
+			finding.FindingType = "intrusion_indicator"
+		}
+	}
+	// Empty finding_type is handled by NormalizedFindingType() at usage sites
+
 	// Validate required fields
 	if finding.Title == "" {
 		finding.Title = "Untitled finding for " + checkID

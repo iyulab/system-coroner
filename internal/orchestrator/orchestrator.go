@@ -123,6 +123,9 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 	// then merge with any operator-declared paths from config [baseline].
 	registerKnownGoodPaths(o.cfg)
 
+	// FP-006: Register coroner's own PID so spawned child processes can be identified.
+	analyzer.AddSelfPID(os.Getpid())
+
 	// Generate output directory
 	outputDir := collector.GenerateOutputDir(o.cfg.Output.Dir)
 	if o.opts.Verbose {
@@ -184,6 +187,13 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 			}
 		}
 		fmt.Fprintf(os.Stderr, "[*] %d/%d checks succeeded\n", succeeded, len(results))
+
+		// FP-006: Register child PIDs from collection for self-process filtering
+		for _, r := range results {
+			if r.ChildPID > 0 {
+				analyzer.AddSelfPID(r.ChildPID)
+			}
+		}
 	}
 
 	if o.opts.CollectOnly {
@@ -256,11 +266,6 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 	// --- Stage 3: Report ---
 	fmt.Fprintf(os.Stderr, "[*] Generating report...\n")
 
-	agg := &reporter.Aggregator{}
-	isolation := agg.ShouldIsolate(analysisResult.Findings)
-	confidenceSummary := reporter.SummarizeConfidence(analysisResult.Findings)
-	iocs := reporter.CollectAllIoCs(analysisResult.Findings)
-
 	// Convert evidence hashes for the report
 	var reportHashes []reporter.EvidenceHash
 	for _, h := range evidenceHashes {
@@ -280,13 +285,29 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 	for _, r := range results {
 		if r.Error != nil {
 			collectionFailures = append(collectionFailures, reporter.CollectionFailure{
-				CheckID:     r.CheckID,
-				CheckName:   checkNameMap[r.CheckID],
-				Error:       r.Error.Error(),
-				FailureKind: r.FailureKind.String(),
+				CheckID:       r.CheckID,
+				CheckName:     checkNameMap[r.CheckID],
+				Error:         r.Error.Error(),
+				FailureKind:   r.FailureKind.String(),
+				StderrExcerpt: r.StderrExcerpt(),
 			})
 		}
 	}
+
+	agg := &reporter.Aggregator{}
+	isolation := agg.ShouldIsolate(analysisResult.Findings, collectionFailures)
+	confidenceSummary := reporter.SummarizeConfidence(analysisResult.Findings)
+	iocs := reporter.CollectAllIoCs(analysisResult.Findings)
+
+	// GAP-001: Compute combined gap analysis for compound failure scenarios
+	failedCheckIDs := make([]string, 0, len(collectionFailures))
+	for _, f := range collectionFailures {
+		failedCheckIDs = append(failedCheckIDs, f.CheckID)
+	}
+
+	// ANA-005: Separate findings by type for distinct report sections
+	intrusionFindings := reporter.FilterIntrusionFindings(analysisResult.Findings)
+	hardeningFindings := reporter.FilterExposureFindings(analysisResult.Findings)
 
 	reportData := reporter.ReportData{
 		Hostname:            hostname,
@@ -296,13 +317,15 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 		Isolation:           isolation,
 		ConfidenceSummary:   confidenceSummary,
 		TotalChecks:         len(o.checks),
-		Findings:            analysisResult.Findings,
+		Findings:            intrusionFindings,
 		RawFindings:         analysisResult.RawFindings,
+		HardeningFindings:   hardeningFindings,
 		Verdict:             analysisResult.Verdict,
 		IoCs:                iocs,
 		EvidenceHashes:      reportHashes,
 		CollectionFailures:  collectionFailures,
 		EvidenceGaps:        reporter.AnalyzeEvidenceGaps(collectionFailures),
+		CombinedGaps:        reporter.DescribeCombinedGaps(failedCheckIDs),
 		LogCapacityWarnings: reporter.DetectLogCapacityWarnings(rawCheckData),
 		RawCheckData:        rawCheckData,
 		SigmaMatches:        sigmaMatches,
@@ -363,7 +386,7 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 			}
 
 			newAgg := &reporter.Aggregator{}
-			newIsolation := newAgg.ShouldIsolate(newResult.Findings)
+			newIsolation := newAgg.ShouldIsolate(newResult.Findings, collectionFailures)
 			newConfidence := reporter.SummarizeConfidence(newResult.Findings)
 			newIoCs := reporter.CollectAllIoCs(newResult.Findings)
 

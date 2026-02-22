@@ -545,6 +545,86 @@ func TestCheckPrompts_CoverAllLinuxChecks(t *testing.T) {
 	}
 }
 
+// --- ANA-005: Finding type tests ---
+
+func TestParseFinding_FindingType_DefaultValue(t *testing.T) {
+	// Empty finding_type should default to "intrusion_indicator" via NormalizedFindingType()
+	raw := `{"check":"test","intrusion_confidence":"high","risk_level":"medium","title":"Test"}`
+	finding, err := ParseFinding("test", raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Raw field should be empty (not set in JSON)
+	if finding.FindingType != "" {
+		t.Errorf("finding_type should be empty when not in JSON, got %q", finding.FindingType)
+	}
+	// NormalizedFindingType should return the default
+	if finding.NormalizedFindingType() != "intrusion_indicator" {
+		t.Errorf("NormalizedFindingType() = %q, want intrusion_indicator", finding.NormalizedFindingType())
+	}
+}
+
+func TestParseFinding_FindingType_Parsing(t *testing.T) {
+	types := []string{"intrusion_indicator", "exposure", "informational"}
+	for _, ft := range types {
+		raw := fmt.Sprintf(`{"check":"test","finding_type":"%s","intrusion_confidence":"medium","risk_level":"low","title":"Test"}`, ft)
+		finding, err := ParseFinding("test", raw)
+		if err != nil {
+			t.Fatalf("unexpected error for finding_type=%s: %v", ft, err)
+		}
+		if finding.FindingType != ft {
+			t.Errorf("finding_type = %q, want %q", finding.FindingType, ft)
+		}
+		if finding.NormalizedFindingType() != ft {
+			t.Errorf("NormalizedFindingType() = %q, want %q", finding.NormalizedFindingType(), ft)
+		}
+	}
+}
+
+func TestParseFinding_FindingType_InvalidDefaultsToIntrusion(t *testing.T) {
+	raw := `{"check":"test","finding_type":"BOGUS","intrusion_confidence":"high","risk_level":"medium","title":"Test"}`
+	finding, err := ParseFinding("test", raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if finding.FindingType != "intrusion_indicator" {
+		t.Errorf("invalid finding_type should default to intrusion_indicator, got %q", finding.FindingType)
+	}
+}
+
+func TestParseFinding_FindingType_CaseNormalization(t *testing.T) {
+	raw := `{"check":"test","finding_type":"EXPOSURE","intrusion_confidence":"high","risk_level":"medium","title":"Test"}`
+	finding, err := ParseFinding("test", raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if finding.FindingType != "exposure" {
+		t.Errorf("finding_type should be lowercased, got %q", finding.FindingType)
+	}
+}
+
+func TestPrompt_ContainsFindingTypeClassification(t *testing.T) {
+	// Both Windows and Linux prompts should contain FINDING TYPE CLASSIFICATION
+	windowsPrompt := GetSystemPrompt("windows")
+	if !contains(windowsPrompt, "FINDING TYPE CLASSIFICATION") {
+		t.Error("Windows prompt should contain FINDING TYPE CLASSIFICATION")
+	}
+	if !contains(windowsPrompt, "intrusion_indicator") {
+		t.Error("Windows prompt should mention intrusion_indicator")
+	}
+	if !contains(windowsPrompt, "exposure") {
+		t.Error("Windows prompt should mention exposure")
+	}
+
+	linuxPrompt := GetSystemPrompt("linux")
+	if !contains(linuxPrompt, "FINDING TYPE CLASSIFICATION") {
+		t.Error("Linux prompt should contain FINDING TYPE CLASSIFICATION")
+	}
+	if !contains(linuxPrompt, "intrusion_indicator") {
+		t.Error("Linux prompt should mention intrusion_indicator")
+	}
+}
+
 func findSubstring(s, sub string) bool {
 	for i := 0; i <= len(s)-len(sub); i++ {
 		if s[i:i+len(sub)] == sub {

@@ -444,6 +444,53 @@ details summary:hover{text-decoration:underline;}
 </section>
 {{end}}
 
+<!-- Hardening Recommendations (ANA-005): exposure-type findings separated from intrusion findings -->
+{{if .HardeningFindings}}
+<section class="report-section" id="s-hardening">
+  <div class="sec-hdr" onclick="toggleSec('hardening')">
+    <h2>Hardening Recommendations <span style="font-size:.8em;font-weight:400;color:var(--fg-muted)">({{len .HardeningFindings}})</span></h2>
+    <div class="hdr-right">
+      <span class="badge" style="background:#2563eb;color:#fff;">EXPOSURE</span>
+      <button class="btn" onclick="event.stopPropagation();copySection('hardening',this)">Copy</button>
+      <span class="chevron closed" id="chev-hardening">&#9662;</span>
+    </div>
+  </div>
+  <div class="sec-body hidden" id="body-hardening">
+    <p style="margin-bottom:14px;opacity:.75;font-size:.88em">Configuration weaknesses that increase attack surface but are not evidence of active intrusion. These are security posture improvements, not incident findings.</p>
+    {{range .HardeningFindings}}
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:3px solid #2563eb;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <span class="badge" style="background:#1e40af;color:#93c5fd;font-size:.7em;">EXPOSURE</span>
+        <span class="badge {{riskClass .RiskLevel}}">{{.RiskLevel}}</span>
+        <strong style="font-size:.92em;">{{.Title}}</strong>
+        <span style="font-family:monospace;font-size:.78em;color:var(--fg-muted);margin-left:auto;">{{.Check}}</span>
+      </div>
+      {{if .AttackScenario}}
+      <div class="field-lbl">Exposure Detail</div>
+      <p style="font-size:.88em;opacity:.9;">{{.AttackScenario}}</p>
+      {{end}}
+      {{if .Evidence}}
+      <div class="field-lbl">Evidence</div>
+      <ul class="evidence-list">
+        {{range .Evidence}}<li>{{.}}</li>{{end}}
+      </ul>
+      {{end}}
+      {{if .ImmediateActions}}
+      <div class="field-lbl">Recommended Actions</div>
+      <ol class="action-list">
+        {{range .ImmediateActions}}<li>{{.}}</li>{{end}}
+      </ol>
+      {{end}}
+      {{if .MITRE}}
+      <div class="field-lbl">MITRE ATT&CK</div>
+      <p>{{range .MITRE}}<span class="mitre-tag">{{.}}</span>{{end}}</p>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
 <!-- Analysis Failures -->
 {{if .RawFindings}}
 <section class="report-section" id="s-raw">
@@ -657,6 +704,7 @@ details summary:hover{text-decoration:underline;}
   {{end}}
   {{if .Verdict}}<a class="toc-link" data-target="s-verdict">Verdict</a>{{end}}
   {{if .Verdict}}{{if .Verdict.Timeline}}<a class="toc-link" data-target="s-timeline">Timeline</a>{{end}}{{end}}
+  {{if .HardeningFindings}}<a class="toc-link" data-target="s-hardening">Hardening ({{len .HardeningFindings}})</a>{{end}}
   {{if .SigmaMatches}}<a class="toc-link" data-target="s-sigma">Sigma ({{len .SigmaMatches}})</a>{{end}}
   {{if .IoCs}}<a class="toc-link" data-target="s-iocs">IoCs</a>{{end}}
   {{if .RawFindings}}<a class="toc-link" data-target="s-raw">Analysis Failures</a>{{end}}
@@ -754,7 +802,7 @@ window.copyAllReport=function(){
   var btn=document.getElementById('btn-copy-all');
   var parts=[];
   ['s-banner','s-summary','body-verdict','body-timeline','body-findings',
-   'body-sigma','body-iocs','body-gaps','body-failures','body-integrity'].forEach(function(id){
+   'body-hardening','body-sigma','body-iocs','body-gaps','body-failures','body-integrity'].forEach(function(id){
     var el=document.getElementById(id);
     if(el){
       var wasHidden=el.classList.contains('hidden');

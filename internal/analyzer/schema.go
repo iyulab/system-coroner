@@ -4,6 +4,7 @@ package analyzer
 // Finding represents the LLM analysis result for a single check.
 type Finding struct {
 	Check               string         `json:"check"`
+	FindingType         string         `json:"finding_type,omitempty"` // intrusion_indicator, exposure, informational (default: intrusion_indicator)
 	IntrusionConfidence string         `json:"intrusion_confidence"`
 	RiskLevel           string         `json:"risk_level"`
 	Title               string         `json:"title"`
@@ -14,6 +15,21 @@ type Finding struct {
 	ImmediateActions    []string       `json:"immediate_actions"`
 	ForensicNextSteps   []string       `json:"forensic_next_steps"`
 	ReasoningChain      ReasoningChain `json:"reasoning_chain"`
+}
+
+// NormalizedFindingType returns the finding type, defaulting to "intrusion_indicator" if empty.
+func (f *Finding) NormalizedFindingType() string {
+	if f.FindingType == "" {
+		return "intrusion_indicator"
+	}
+	return f.FindingType
+}
+
+// ValidFindingTypes are the accepted finding type values.
+var ValidFindingTypes = map[string]bool{
+	"intrusion_indicator": true,
+	"exposure":            true,
+	"informational":       true,
 }
 
 // IoC contains extracted Indicators of Compromise.
@@ -81,6 +97,7 @@ type IoCEntry struct {
 	Value     string `json:"value"`
 	Context   string `json:"context"`
 	FindingID string `json:"finding_id"`
+	Status    string `json:"status,omitempty"` // "active", "low_confidence", or empty (defaults to active)
 }
 
 // AnalysisResult wraps the complete analysis output.
@@ -121,6 +138,7 @@ var FindingSchema = map[string]interface{}{
 	"type": "object",
 	"properties": map[string]interface{}{
 		"check":                map[string]interface{}{"type": "string"},
+		"finding_type":         map[string]interface{}{"type": "string", "enum": []string{"intrusion_indicator", "exposure", "informational"}},
 		"intrusion_confidence": map[string]interface{}{"type": "string", "enum": []string{"confirmed", "high", "medium", "low", "informational", "clean"}},
 		"risk_level":           map[string]interface{}{"type": "string", "enum": []string{"critical", "high", "medium", "low", "none"}},
 		"title":                map[string]interface{}{"type": "string"},

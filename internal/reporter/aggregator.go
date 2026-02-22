@@ -24,12 +24,16 @@ type Aggregator struct{}
 // and collection failures. Collection gaps with high forensic impact escalate
 // the urgency because "no findings" may simply mean "no visibility".
 func (a *Aggregator) ShouldIsolate(findings []analyzer.Finding, failures []CollectionFailure) IsolationRecommendation {
+	// ANA-005: Only intrusion indicators affect isolation decisions.
+	// Exposure (hardening gaps) and informational findings are excluded.
+	intrusions := filterIntrusionFindings(findings)
+
 	highGaps := countHighImpactGaps(failures)
 	gapNames := highImpactGapNames(failures)
 	incomplete := highGaps >= 2
 
 	// Immediate isolation: any confirmed finding
-	for _, f := range findings {
+	for _, f := range intrusions {
 		if f.IntrusionConfidence == "confirmed" {
 			return IsolationRecommendation{
 				Isolate:              true,
@@ -42,7 +46,7 @@ func (a *Aggregator) ShouldIsolate(findings []analyzer.Finding, failures []Colle
 	}
 
 	// Urgent isolation: 2+ high confidence findings
-	highCount := countByConfidence(findings, "high")
+	highCount := countByConfidence(intrusions, "high")
 	if highCount >= 2 {
 		return IsolationRecommendation{
 			Isolate:              true,
@@ -70,7 +74,7 @@ func (a *Aggregator) ShouldIsolate(findings []analyzer.Finding, failures []Colle
 	}
 
 	// Warning: medium findings — escalate to investigate if gaps are significant
-	mediumCount := countByConfidence(findings, "medium")
+	mediumCount := countByConfidence(intrusions, "medium")
 	if mediumCount > 0 {
 		rec := IsolationRecommendation{
 			Isolate:              false,
@@ -148,6 +152,37 @@ func countByConfidence(findings []analyzer.Finding, level string) int {
 		}
 	}
 	return count
+}
+
+// filterIntrusionFindings returns only findings with finding_type "intrusion_indicator" (or empty/default).
+// Exposure and informational findings are excluded from isolation and confidence decisions.
+func filterIntrusionFindings(findings []analyzer.Finding) []analyzer.Finding {
+	result := make([]analyzer.Finding, 0, len(findings))
+	for _, f := range findings {
+		ft := f.NormalizedFindingType()
+		if ft == "intrusion_indicator" {
+			result = append(result, f)
+		}
+	}
+	return result
+}
+
+// FilterIntrusionFindings returns only findings with finding_type "intrusion_indicator" (or empty/default).
+// Used to populate the main Findings section of the report.
+func FilterIntrusionFindings(findings []analyzer.Finding) []analyzer.Finding {
+	return filterIntrusionFindings(findings)
+}
+
+// FilterExposureFindings returns only findings with finding_type "exposure".
+// Used to build the Hardening Recommendations section of the report.
+func FilterExposureFindings(findings []analyzer.Finding) []analyzer.Finding {
+	result := make([]analyzer.Finding, 0)
+	for _, f := range findings {
+		if f.FindingType == "exposure" {
+			result = append(result, f)
+		}
+	}
+	return result
 }
 
 // ConfidenceSummary aggregates confidence levels for display.

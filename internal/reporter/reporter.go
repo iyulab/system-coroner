@@ -18,10 +18,11 @@ var templates embed.FS
 
 // CollectionFailure records a check that failed during script execution.
 type CollectionFailure struct {
-	CheckID     string `json:"check_id"`
-	CheckName   string `json:"check_name"`
-	Error       string `json:"error"`
-	FailureKind string `json:"failure_kind"` // timeout | permission_denied | script_error | not_found | unknown
+	CheckID       string `json:"check_id"`
+	CheckName     string `json:"check_name"`
+	Error         string `json:"error"`
+	FailureKind   string `json:"failure_kind"`             // timeout | permission_denied | script_error | not_found | unknown
+	StderrExcerpt string `json:"stderr_excerpt,omitempty"` // first 200 chars of stderr, with permission hint if applicable
 }
 
 // ReportData is the complete data model passed to the HTML template.
@@ -39,9 +40,12 @@ type ReportData struct {
 	ConfidenceSummary ConfidenceSummary `json:"confidence_summary"`
 	TotalChecks       int               `json:"total_checks"`
 
-	// Findings
+	// Findings (intrusion indicators only — exposure findings go to HardeningFindings)
 	Findings    []analyzer.Finding    `json:"findings"`
 	RawFindings []analyzer.RawFinding `json:"raw_findings,omitempty"`
+
+	// Hardening recommendations (ANA-005): exposure-type findings separated from intrusion findings
+	HardeningFindings []analyzer.Finding `json:"hardening_findings,omitempty"`
 
 	// Verdict (cross-analysis)
 	Verdict *analyzer.Verdict `json:"verdict,omitempty"`
@@ -57,6 +61,9 @@ type ReportData struct {
 
 	// Evidence gap analysis (RP-007): forensic impact of each collection failure
 	EvidenceGaps []EvidenceGap `json:"evidence_gaps,omitempty"`
+
+	// Combined gap analysis (GAP-001): compound impact of multiple simultaneous failures
+	CombinedGaps []CombinedGap `json:"combined_gaps,omitempty"`
 
 	// Log capacity warnings (RP-009): event log capacity and evidence loss risk
 	LogCapacityWarnings []LogCapacityWarning `json:"log_capacity_warnings,omitempty"`

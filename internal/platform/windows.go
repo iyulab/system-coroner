@@ -82,7 +82,7 @@ func WindowsChecks() []Check {
 			Name:          "Webshell Detection",
 			Description:   "Detect new or modified script files in web roots and IIS log anomalies",
 			Script:        "windows/webshell.ps1",
-			Timeout:       30 * time.Second,
+			Timeout:       60 * time.Second,
 			OutputFormat:  "json",
 			RequiresAdmin: false,
 		},

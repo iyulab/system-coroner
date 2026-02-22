@@ -3,7 +3,7 @@
 # Detection: Web shell files in web server root directories
 # MITRE: T1505.003, T1190
 # Requires: Standard User (Admin for IIS log access)
-# Expected runtime: ~15s
+# Expected runtime: ~15s (timeout: 60s)
 
 [CmdletBinding()]
 param()
@@ -11,6 +11,9 @@ param()
 $ErrorActionPreference = "Continue"
 
 try {
+    $scanStart = Get-Date
+    $timeoutSeconds = 50  # bail at 50s to leave margin before 60s hard kill
+
     $result = @{
         collected_at     = (Get-Date -Format "o")
         hostname         = $env:COMPUTERNAME
@@ -19,6 +22,7 @@ try {
         suspicious_files = @()
         recent_files     = @()
         iis_anomalies    = @()
+        scan_incomplete  = $false
         errors           = @()
     }
 
@@ -84,13 +88,18 @@ try {
     # Dangerous file types that should not be in web roots
     $dangerousExtensions = @('.exe', '.dll', '.ps1', '.bat', '.cmd', '.vbs', '.js', '.wsf')
 
+    $scanTimedOut = $false
     foreach ($root in $webRoots) {
+        if ($scanTimedOut) { break }
         try {
             # Check script files for suspicious content
             $scriptFiles = Get-ChildItem -Path $root -Recurse -File -ErrorAction SilentlyContinue |
                 Where-Object { $_.Extension.ToLower() -in $suspiciousExtensions }
 
             foreach ($file in $scriptFiles) {
+                if (((Get-Date) - $scanStart).TotalSeconds -ge $timeoutSeconds) {
+                    $scanTimedOut = $true; break
+                }
                 try {
                     $content = Get-Content -Path $file.FullName -Raw -ErrorAction SilentlyContinue -TotalCount 50000
                     if ($content -and $content -match $suspiciousPattern) {
@@ -109,11 +118,16 @@ try {
                 catch { }
             }
 
+            if ($scanTimedOut) { break }
+
             # Check for dangerous file types
             $dangerousFiles = Get-ChildItem -Path $root -Recurse -File -ErrorAction SilentlyContinue |
                 Where-Object { $_.Extension.ToLower() -in $dangerousExtensions }
 
             foreach ($file in $dangerousFiles) {
+                if (((Get-Date) - $scanStart).TotalSeconds -ge $timeoutSeconds) {
+                    $scanTimedOut = $true; break
+                }
                 $result.suspicious_files += [PSCustomObject]@{
                     path       = $file.FullName
                     extension  = $file.Extension
@@ -123,6 +137,8 @@ try {
                     patterns   = "dangerous_extension_in_webroot"
                 }
             }
+
+            if ($scanTimedOut) { break }
 
             # Recently modified files (7 days)
             $recent = Get-ChildItem -Path $root -Recurse -File -ErrorAction SilentlyContinue |
@@ -142,6 +158,11 @@ try {
             }
         }
         catch { $result.errors += "scan $root`: $($_.Exception.Message)" }
+    }
+
+    if ($scanTimedOut) {
+        $result.scan_incomplete = $true
+        $result.errors += "scan timed out after ${timeoutSeconds}s — partial results returned"
     }
 
     # --- IIS log anomalies (POST to static-like paths) ---

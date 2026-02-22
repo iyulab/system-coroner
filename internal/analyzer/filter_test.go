@@ -212,7 +212,7 @@ func TestUnsignedRunKeyRule_ErrorStatus(t *testing.T) {
 	}{
 		{"valid", "Valid", FilterUncertain},
 		{"notsigned", "NotSigned", FilterSuspicious},
-		{"error", "Error", FilterUncertain},         // FP-005: error → uncertain
+		{"error", "Error", FilterUncertain}, // FP-005: error → uncertain
 		{"hashmismatch", "HashMismatch", FilterSuspicious},
 		{"filenotfound", "FileNotFound", FilterUncertain},
 		{"pathnotresolved", "PathNotResolved", FilterUncertain},

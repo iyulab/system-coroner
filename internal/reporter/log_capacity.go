@@ -12,10 +12,10 @@ type LogCapacityWarning struct {
 	FileSizeMB  float64 `json:"file_size_mb"`
 	MaxSizeMB   float64 `json:"max_size_mb"`
 	FillPercent float64 `json:"fill_percent"`
-	LogMode     string  `json:"log_mode"`      // Circular, AutoBackup, Retain
+	LogMode     string  `json:"log_mode"` // Circular, AutoBackup, Retain
 	RecordCount int     `json:"record_count"`
 	Warning     string  `json:"warning"`
-	Severity    string  `json:"severity"`       // high, medium
+	Severity    string  `json:"severity"` // high, medium
 }
 
 // DetectLogCapacityWarnings analyzes raw check data for log capacity issues.

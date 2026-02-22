@@ -2,20 +2,20 @@ package reporter
 
 // EvidenceGap describes the impact of a failed collection check on the overall assessment.
 type EvidenceGap struct {
-	CheckID       string `json:"check_id"`
-	CheckName     string `json:"check_name"`
-	MissingData   string `json:"missing_data"`   // what evidence is absent
-	BlindSpots    string `json:"blind_spots"`     // what attack stages become invisible
-	Impact        string `json:"impact"`          // how this affects the overall conclusion
+	CheckID        string `json:"check_id"`
+	CheckName      string `json:"check_name"`
+	MissingData    string `json:"missing_data"`    // what evidence is absent
+	BlindSpots     string `json:"blind_spots"`     // what attack stages become invisible
+	Impact         string `json:"impact"`          // how this affects the overall conclusion
 	ImpactSeverity string `json:"impact_severity"` // high, medium, low
 }
 
 // checkGapDescriptions maps check IDs to their forensic impact descriptions.
 var checkGapDescriptions = map[string]struct {
-	missingData   string
-	blindSpots    string
-	impact        string
-	severity      string
+	missingData string
+	blindSpots  string
+	impact      string
+	severity    string
 }{
 	"c2_connections": {
 		missingData: "Active network connections, DNS cache, listening ports, service installations",

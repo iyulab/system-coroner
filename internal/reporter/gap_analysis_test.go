@@ -86,3 +86,83 @@ func TestAnalyzeEvidenceGaps_CheckNameFallback(t *testing.T) {
 		t.Errorf("expected CheckName fallback to ID, got %q", gaps[0].CheckName)
 	}
 }
+
+// --- GAP-001: Combined gap analysis tests ---
+
+func TestCombinedGaps_AccountAndFileless(t *testing.T) {
+	gaps := DescribeCombinedGaps([]string{"account_compromise", "fileless_attack"})
+	if len(gaps) == 0 {
+		t.Fatal("expected at least 1 combined gap for account_compromise + fileless_attack")
+	}
+	found := false
+	for _, g := range gaps {
+		if g.Scenario == "Fileless initial access via compromised credentials" {
+			found = true
+			if g.KillChainGap == "" {
+				t.Error("kill chain gap should not be empty")
+			}
+			if g.CombinedImpact == "" {
+				t.Error("combined impact should not be empty")
+			}
+			if len(g.CheckIDs) != 2 {
+				t.Errorf("expected 2 check IDs, got %d", len(g.CheckIDs))
+			}
+		}
+	}
+	if !found {
+		t.Error("expected specific combined gap scenario")
+	}
+}
+
+func TestCombinedGaps_SingleFailure(t *testing.T) {
+	gaps := DescribeCombinedGaps([]string{"c2_connections"})
+	if len(gaps) != 0 {
+		t.Errorf("single failure should produce no combined gaps, got %d", len(gaps))
+	}
+}
+
+func TestCombinedGaps_NoFailures(t *testing.T) {
+	gaps := DescribeCombinedGaps(nil)
+	if len(gaps) != 0 {
+		t.Errorf("no failures should produce no combined gaps, got %d", len(gaps))
+	}
+}
+
+func TestCombinedGaps_AllFailed(t *testing.T) {
+	// Simulate worst case: many checks failed
+	all := []string{
+		"account_compromise", "fileless_attack", "process_execution",
+		"credential_dump", "c2_connections", "lateral_movement",
+		"persistence", "log_tampering", "staging_exfiltration",
+	}
+	gaps := DescribeCombinedGaps(all)
+	if len(gaps) == 0 {
+		t.Fatal("expected multiple combined gaps for worst-case scenario")
+	}
+	// Should match all 8 defined combinations
+	if len(gaps) != 8 {
+		t.Errorf("expected 8 combined gaps for all-failed scenario, got %d", len(gaps))
+	}
+}
+
+func TestCombinedGaps_NonMatchingChecks(t *testing.T) {
+	// Checks that don't form any known combination
+	gaps := DescribeCombinedGaps([]string{"webshell", "discovery_recon"})
+	if len(gaps) != 0 {
+		t.Errorf("unrelated checks should produce no combined gaps, got %d", len(gaps))
+	}
+}
+
+func TestCombinedGaps_ThreeCheckCombo(t *testing.T) {
+	gaps := DescribeCombinedGaps([]string{"fileless_attack", "process_execution", "credential_dump"})
+	found := false
+	for _, g := range gaps {
+		if len(g.CheckIDs) == 3 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected 3-check combination gap")
+	}
+}

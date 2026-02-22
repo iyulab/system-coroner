@@ -122,6 +122,10 @@ th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);}
 th{background:rgba(255,255,255,.04);font-weight:600;font-size:.78em;text-transform:uppercase;letter-spacing:.04em;color:var(--fg-muted);}
 td{font-family:monospace;font-size:.84em;}
 tr:last-child td{border-bottom:none;}
+tr.ioc-low{opacity:.6;font-style:italic;}
+.ioc-status{font-size:.75em;padding:2px 6px;border-radius:3px;font-weight:600;text-transform:uppercase;}
+.ioc-status-active{background:rgba(248,81,73,.15);color:#f85149;}
+.ioc-status-low{background:rgba(255,255,255,.08);color:var(--fg-muted);}
 
 /* ── Scoring Matrix ── */
 .matrix-table{border:1px solid var(--border);border-radius:6px;overflow:hidden;}
@@ -210,12 +214,20 @@ details summary:hover{text-decoration:underline;}
 <div id="s-banner" class="banner {{bannerClass .Isolation}}" style="scroll-margin-top:calc(var(--topbar-h) + 10px)">
   {{if .Isolation.Isolate}}
   <h1>{{if eq .Isolation.Urgency "immediate"}}ISOLATE IMMEDIATELY{{else}}ISOLATION RECOMMENDED{{end}}</h1>
+  {{else if eq .Isolation.Urgency "investigate"}}
+  <h1>INVESTIGATION REQUIRED</h1>
   {{else if eq .Isolation.Banner "yellow"}}
   <h1>INVESTIGATION NEEDED</h1>
   {{else}}
   <h1>NO INTRUSION DETECTED</h1>
   {{end}}
   <p>{{.Isolation.Reason}}</p>
+  {{if .Isolation.IncompleteAssessment}}
+  <div style="margin-top:10px;padding:8px 14px;background:rgba(217,119,6,.15);border:1px solid var(--yellow);border-radius:6px;display:inline-block;">
+    <strong style="color:var(--yellow);font-size:.88em;letter-spacing:.04em;">INCOMPLETE ASSESSMENT</strong>
+    <span style="font-size:.84em;opacity:.85;margin-left:6px;">Collection failures may hide intrusion evidence</span>
+  </div>
+  {{end}}
 </div>
 
 {{if .AnalystContext}}
@@ -500,10 +512,10 @@ details summary:hover{text-decoration:underline;}
   </div>
   <div class="sec-body" id="body-iocs">
     <table id="ioc-table">
-      <thead><tr><th>Type</th><th>Value</th><th>Source</th></tr></thead>
+      <thead><tr><th>Type</th><th>Value</th><th>Source</th><th>Status</th></tr></thead>
       <tbody>
         {{range .IoCs}}
-        <tr><td>{{.Type}}</td><td>{{.Value}}</td><td>{{.Context}}</td></tr>
+        <tr{{if eq .Status "low_confidence"}} class="ioc-low"{{end}}><td>{{.Type}}</td><td>{{.Value}}</td><td>{{.Context}}</td><td>{{if eq .Status "low_confidence"}}<span class="ioc-status ioc-status-low">low</span>{{else}}<span class="ioc-status ioc-status-active">active</span>{{end}}</td></tr>
         {{end}}
       </tbody>
     </table>
@@ -544,7 +556,7 @@ details summary:hover{text-decoration:underline;}
       <p style="margin-top:4px;font-size:.88em;opacity:.85;">{{len .CollectionFailures}} check(s) failed to collect data. The conclusions in this report may be incomplete — attack activity in the blind spots listed below would NOT be detected.</p>
     </div>
     <table>
-      <thead><tr><th>Check</th><th>ID</th><th>Kind</th><th>Error</th></tr></thead>
+      <thead><tr><th>Check</th><th>ID</th><th>Kind</th><th>Error</th><th>Stderr Excerpt</th></tr></thead>
       <tbody>
         {{range .CollectionFailures}}
         <tr>
@@ -552,6 +564,7 @@ details summary:hover{text-decoration:underline;}
           <td>{{.CheckID}}</td>
           <td><span class="badge {{failureKindClass .FailureKind}}">{{.FailureKind}}</span></td>
           <td style="color:var(--red);word-break:break-word;max-width:300px">{{.Error}}</td>
+          <td style="font-family:monospace;font-size:0.85em;color:var(--fg-muted);word-break:break-word;max-width:350px">{{.StderrExcerpt}}</td>
         </tr>
         {{end}}
       </tbody>
@@ -570,6 +583,26 @@ details summary:hover{text-decoration:underline;}
       <p style="font-size:.85em;margin-bottom:4px;">{{.BlindSpots}}</p>
       <div class="field-lbl">Impact on Assessment</div>
       <p style="font-size:.85em;color:var(--fg);">{{.Impact}}</p>
+    </div>
+    {{end}}
+    {{end}}
+    {{if .CombinedGaps}}
+    <h3 style="margin-top:20px;margin-bottom:10px;font-size:.95em;color:var(--red);">Combined Impact Analysis</h3>
+    <div style="background:rgba(248,81,73,.06);border:1px solid var(--red);border-radius:6px;padding:12px 16px;margin-bottom:12px;">
+      <p style="font-size:.85em;opacity:.85;margin:0;">The following attack scenarios are undetectable due to multiple simultaneous evidence gaps.</p>
+    </div>
+    {{range .CombinedGaps}}
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin-bottom:10px;border-left:3px solid var(--red);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <strong style="font-size:.9em;">{{.Scenario}}</strong>
+        <span class="badge risk-critical">compound gap</span>
+      </div>
+      <div class="field-lbl">Failed Checks</div>
+      <p style="font-size:.85em;margin-bottom:4px;font-family:monospace;">{{range $i, $id := .CheckIDs}}{{if $i}}, {{end}}{{$id}}{{end}}</p>
+      <div class="field-lbl">Kill Chain Blind Spots</div>
+      <p style="font-size:.85em;margin-bottom:4px;">{{.KillChainGap}}</p>
+      <div class="field-lbl">Combined Impact</div>
+      <p style="font-size:.85em;color:var(--fg);">{{.CombinedImpact}}</p>
     </div>
     {{end}}
     {{end}}

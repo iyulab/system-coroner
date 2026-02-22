@@ -1,7 +1,10 @@
 // Package collector implements parallel script execution for IoC collection.
 package collector
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // FailureKind classifies why a check failed to execute.
 type FailureKind int
@@ -53,4 +56,43 @@ type Result struct {
 	FailureKind FailureKind
 	// CollectedAt is the UTC timestamp when collection started.
 	CollectedAt time.Time
+	// ChildPID is the PID of the spawned child process (0 if unavailable).
+	ChildPID int
+}
+
+// maxStderrExcerpt is the maximum number of characters for the stderr excerpt.
+const maxStderrExcerpt = 200
+
+// permissionKeywords are patterns indicating a permission/elevation problem.
+var permissionKeywords = []string{
+	"access denied",
+	"access is denied",
+	"permission denied",
+	"requires elevation",
+	"run as administrator",
+	"관리자",
+}
+
+// StderrExcerpt returns the first 200 characters of stderr (trimmed),
+// with a hint appended when permission-related keywords are detected.
+func (r *Result) StderrExcerpt() string {
+	raw := strings.TrimSpace(string(r.Stderr))
+	if raw == "" {
+		return ""
+	}
+
+	excerpt := raw
+	if len(excerpt) > maxStderrExcerpt {
+		excerpt = excerpt[:maxStderrExcerpt] + "..."
+	}
+
+	lower := strings.ToLower(raw)
+	for _, kw := range permissionKeywords {
+		if strings.Contains(lower, kw) {
+			excerpt += " [Hint: re-run with administrator privileges]"
+			break
+		}
+	}
+
+	return excerpt
 }

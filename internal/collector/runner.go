@@ -45,7 +45,18 @@ func RunCheck(ctx context.Context, check platform.Check, scriptContent []byte) R
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err = cmd.Run()
+	if startErr := cmd.Start(); startErr != nil {
+		result.Error = fmt.Errorf("start: %w", startErr)
+		result.ExitCode = -1
+		result.Duration = time.Since(start)
+		result.FailureKind = FailureUnknown
+		return result
+	}
+	// Record child PID for self-process exclusion (FP-006)
+	if cmd.Process != nil {
+		result.ChildPID = cmd.Process.Pid
+	}
+	err = cmd.Wait()
 	result.Duration = time.Since(start)
 	result.Stdout = stdout.Bytes()
 	result.Stderr = stderr.Bytes()

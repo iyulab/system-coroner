@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -235,6 +236,64 @@ func TestRunCheck_StderrOnly(t *testing.T) {
 	// stderr should be captured even when there's no stdout
 	if len(result.Stderr) == 0 {
 		t.Error("stderr should contain diagnostic output")
+	}
+}
+
+func TestStderrExcerpt_Empty(t *testing.T) {
+	r := Result{Stderr: nil}
+	if got := r.StderrExcerpt(); got != "" {
+		t.Errorf("StderrExcerpt() = %q, want empty", got)
+	}
+	r2 := Result{Stderr: []byte("  \n  ")}
+	if got := r2.StderrExcerpt(); got != "" {
+		t.Errorf("StderrExcerpt() for whitespace = %q, want empty", got)
+	}
+}
+
+func TestStderrExcerpt_Short(t *testing.T) {
+	r := Result{Stderr: []byte("some error occurred")}
+	got := r.StderrExcerpt()
+	if got != "some error occurred" {
+		t.Errorf("StderrExcerpt() = %q, want %q", got, "some error occurred")
+	}
+}
+
+func TestStderrExcerpt_Truncation(t *testing.T) {
+	// Build a string longer than 200 chars
+	long := ""
+	for len(long) < 250 {
+		long += "abcdefghij"
+	}
+	r := Result{Stderr: []byte(long)}
+	got := r.StderrExcerpt()
+	if len(got) < 200 {
+		t.Errorf("expected excerpt length >= 200, got %d", len(got))
+	}
+	if got[200:203] != "..." {
+		t.Errorf("expected '...' at position 200, got %q", got[200:203])
+	}
+}
+
+func TestStderrExcerpt_PermissionHint(t *testing.T) {
+	cases := []struct {
+		stderr string
+		hint   bool
+	}{
+		{"Error: Access Denied for resource", true},
+		{"Access is denied.", true},
+		{"bash: permission denied", true},
+		{"requires elevation to run", true},
+		{"Please run as administrator", true},
+		{"관리자 권한이 필요합니다", true},
+		{"some random script error", false},
+	}
+	for _, tc := range cases {
+		r := Result{Stderr: []byte(tc.stderr)}
+		got := r.StderrExcerpt()
+		hasHint := strings.Contains(got, "[Hint: re-run with administrator privileges]")
+		if hasHint != tc.hint {
+			t.Errorf("stderr=%q: hasHint=%v, want %v; got=%q", tc.stderr, hasHint, tc.hint, got)
+		}
 	}
 }
 

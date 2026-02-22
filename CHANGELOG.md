@@ -6,6 +6,26 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.7.0] — 2026-02-22
+
+### Added
+- **Incomplete assessment detection** (AGG-001): isolation/banner urgency now factors in collection failures — ≥2 HIGH-impact gaps escalate to "investigate", INCOMPLETE ASSESSMENT sub-banner displayed
+- **Self-process exclusion** (FP-006): coroner PID and child PowerShell processes annotated with `_analysis_hint` to prevent false positives in staging_exfiltration analysis
+- **Stderr excerpt in failures** (CF-001): `StderrExcerpt()` captures first 200 chars of script stderr; permission keyword detection appends re-run hint; new column in Collection Failures table
+- **Benign IoC filtering** (IOC-001): IoC table filters by finding confidence — clean/informational excluded, low marked as `low_confidence`, medium+ as `active`; deduplication favors suspicious over benign
+- **Finding type classification** (ANA-005): `finding_type` enum (`intrusion_indicator`, `exposure`, `informational`) separates intrusion evidence from hardening gaps; new "Hardening Recommendations" report section for exposure findings
+- **Combined evidence gap analysis** (GAP-001): 8 predefined multi-check failure scenarios with compound blind spot descriptions and kill chain gap mapping
+- **Webshell progressive scan** (WEB-001): timeout increased to 60s with elapsed-time check; outputs partial results with `scan_incomplete` flag when approaching timeout
+
+### Fixed
+- **Log capacity fixture alignment** (RP-010): test fixtures updated to match actual `log_tampering.ps1` output format (`name` field, `fill_percent`, `log_mode`, `is_enabled`, `record_count`); added `RealScriptOutput` test reproducing D6DQSB24 scenario
+
+### Internal
+- Phase 12 complete: 8 issues from D6DQSB24 field assessment resolved
+- Sprint 08: 7 commits, all tests passing
+
+---
+
 ## [0.3.0] — 2026-02-21
 
 ### Added
